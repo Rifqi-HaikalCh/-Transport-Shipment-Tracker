@@ -2,7 +2,7 @@
 import { useRouter } from 'vue-router'
 import { useShipmentStore } from '@/stores/shipment'
 import StatusBadge from '@/components/StatusBadge.vue'
-import { AlertTriangle } from 'lucide-vue-next'
+import { AlertTriangle, Clock } from 'lucide-vue-next'
 
 const router = useRouter()
 const store = useShipmentStore()
@@ -17,6 +17,22 @@ function formatDate(dateStr: string) {
     day: 'numeric',
     year: 'numeric',
   })
+}
+
+function formatCountdown(seconds: number): string {
+  if (seconds <= 0) return 'Arriving soon...'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}h ${m}m remaining`
+  if (m > 0) return `${m}m ${s}s remaining`
+  return `${s}s remaining`
+}
+
+function countdownColor(seconds: number): string {
+  if (seconds <= 30) return 'text-red-500 dark:text-red-400'
+  if (seconds <= 120) return 'text-amber-500 dark:text-amber-400'
+  return 'text-green-600 dark:text-green-400'
 }
 
 function isUntrackable(s: { status: string; transporterId: string | null }) {
@@ -110,7 +126,21 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
             </td>
             <!-- Est. Delivery -->
             <td class="px-5 py-4">
-              <span class="text-zinc-600 dark:text-zinc-400 text-sm font-medium">{{ formatDate(shipment.estimatedDelivery) }}</span>
+              <template v-if="store.shipmentCountdowns[shipment.id] !== undefined">
+                <!-- Live countdown (simulation active) -->
+                <div>
+                  <div class="flex items-center gap-1.5">
+                    <Clock class="w-3.5 h-3.5 shrink-0" :class="countdownColor(store.shipmentCountdowns[shipment.id] ?? 0)" />
+                    <span class="text-sm font-bold tabular-nums" :class="countdownColor(store.shipmentCountdowns[shipment.id] ?? 0)">
+                      {{ formatCountdown(store.shipmentCountdowns[shipment.id] ?? 0) }}
+                    </span>
+                  </div>
+                  <p class="text-zinc-400 dark:text-zinc-500 text-xs mt-0.5 font-medium">{{ formatDate(shipment.estimatedDelivery) }}</p>
+                </div>
+              </template>
+              <template v-else>
+                <span class="text-zinc-600 dark:text-zinc-400 text-sm font-medium">{{ formatDate(shipment.estimatedDelivery) }}</span>
+              </template>
             </td>
             <!-- Action -->
             <td class="px-5 py-4 text-right">
