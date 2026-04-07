@@ -94,6 +94,8 @@ export function makeServer({ environment = 'development' } = {}) {
         createdAt: '2026-04-01',
         transporterId: 'tr-001',
         transporterName: 'PT. Ekspres Logistik',
+        vehicleType: 'Truck',
+        vehiclePlate: 'B 1234 XYZ',
         description: 'Elektronik - Smart TV 55" (5 units)',
       } as any)
 
@@ -108,6 +110,8 @@ export function makeServer({ environment = 'development' } = {}) {
         createdAt: '2026-04-03',
         transporterId: null,
         transporterName: null,
+        vehicleType: null,
+        vehiclePlate: null,
         description: 'Textile - Kain Batik Premium (50 rolls)',
       } as any)
 
@@ -122,6 +126,8 @@ export function makeServer({ environment = 'development' } = {}) {
         createdAt: '2026-03-28',
         transporterId: 'tr-002',
         transporterName: 'CV. Cepat Sampai',
+        vehicleType: 'Van',
+        vehiclePlate: 'D 5678 ABC',
         description: 'Makanan - Frozen Food (100 boxes)',
       } as any)
 
@@ -136,6 +142,8 @@ export function makeServer({ environment = 'development' } = {}) {
         createdAt: '2026-04-05',
         transporterId: null,
         transporterName: null,
+        vehicleType: null,
+        vehiclePlate: null,
         description: 'Furniture - Meja Kantor (20 sets)',
       } as any)
 
@@ -150,6 +158,8 @@ export function makeServer({ environment = 'development' } = {}) {
         createdAt: '2026-04-02',
         transporterId: 'tr-004',
         transporterName: 'Kargo Nusantara',
+        vehicleType: 'Container',
+        vehiclePlate: 'L 3456 GHI',
         description: 'Bahan Bangunan - Semen (200 sak)',
       } as any)
 
@@ -164,6 +174,8 @@ export function makeServer({ environment = 'development' } = {}) {
         createdAt: '2026-04-01',
         transporterId: null,
         transporterName: null,
+        vehicleType: null,
+        vehiclePlate: null,
         description: 'Kerajinan - Wayang Kulit (30 pcs)',
       } as any)
 
@@ -178,6 +190,8 @@ export function makeServer({ environment = 'development' } = {}) {
         createdAt: '2026-04-06',
         transporterId: null,
         transporterName: null,
+        vehicleType: null,
+        vehiclePlate: null,
         description: 'Otomotif - Spare Part Mobil (assorted)',
       } as any)
 
@@ -192,6 +206,8 @@ export function makeServer({ environment = 'development' } = {}) {
         createdAt: '2026-04-04',
         transporterId: 'tr-005',
         transporterName: 'PT. Lintas Samudra',
+        vehicleType: 'Ship',
+        vehiclePlate: 'SRG-2024-01',
         description: 'Farmasi - Medical Supplies (100 karton)',
       } as any)
     },
@@ -257,6 +273,8 @@ export function makeServer({ environment = 'development' } = {}) {
         shipment.update({
           transporterId: transporter.attrs.id,
           transporterName: transporter.attrs.name,
+          vehicleType: transporter.attrs.vehicleType,
+          vehiclePlate: transporter.attrs.vehiclePlate,
           status: 'In Transit',
         })
 
