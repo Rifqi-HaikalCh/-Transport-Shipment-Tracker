@@ -35,8 +35,8 @@ describe('Shipment Store', () => {
   it('filters shipments by status', () => {
     const store = useShipmentStore()
     store.shipments = [
-      { id: '1', trackingNumber: 'T1', status: 'Pending', origin: 'A', destination: 'B', description: '', weight: 10, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null },
-      { id: '2', trackingNumber: 'T2', status: 'Delivered', origin: 'C', destination: 'D', description: '', weight: 20, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null },
+      { id: '1', trackingNumber: 'T1', status: 'Pending', origin: 'A', destination: 'B', description: '', weight: 10, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null, vehicleType: null, vehiclePlate: null },
+      { id: '2', trackingNumber: 'T2', status: 'Delivered', origin: 'C', destination: 'D', description: '', weight: 20, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null, vehicleType: null, vehiclePlate: null },
     ]
 
     store.setFilterStatus('Pending')
@@ -50,8 +50,8 @@ describe('Shipment Store', () => {
   it('filters shipments by search query', () => {
     const store = useShipmentStore()
     store.shipments = [
-      { id: '1', trackingNumber: 'TRK-001', status: 'Pending', origin: 'Jakarta', destination: 'Surabaya', description: 'Elektronik', weight: 10, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null },
-      { id: '2', trackingNumber: 'TRK-002', status: 'Delivered', origin: 'Bandung', destination: 'Semarang', description: 'Textile', weight: 20, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null },
+      { id: '1', trackingNumber: 'TRK-001', status: 'Pending', origin: 'Jakarta', destination: 'Surabaya', description: 'Elektronik', weight: 10, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null, vehicleType: null, vehiclePlate: null },
+      { id: '2', trackingNumber: 'TRK-002', status: 'Delivered', origin: 'Bandung', destination: 'Semarang', description: 'Textile', weight: 20, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null, vehicleType: null, vehiclePlate: null },
     ]
 
     store.setSearchQuery('Jakarta')
@@ -66,10 +66,10 @@ describe('Shipment Store', () => {
   it('computes status counts correctly', () => {
     const store = useShipmentStore()
     store.shipments = [
-      { id: '1', trackingNumber: 'T1', status: 'Pending', origin: '', destination: '', description: '', weight: 0, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null },
-      { id: '2', trackingNumber: 'T2', status: 'Pending', origin: '', destination: '', description: '', weight: 0, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null },
-      { id: '3', trackingNumber: 'T3', status: 'In Transit', origin: '', destination: '', description: '', weight: 0, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null },
-      { id: '4', trackingNumber: 'T4', status: 'Delivered', origin: '', destination: '', description: '', weight: 0, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null },
+      { id: '1', trackingNumber: 'T1', status: 'Pending', origin: '', destination: '', description: '', weight: 0, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null, vehicleType: null, vehiclePlate: null },
+      { id: '2', trackingNumber: 'T2', status: 'Pending', origin: '', destination: '', description: '', weight: 0, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null, vehicleType: null, vehiclePlate: null },
+      { id: '3', trackingNumber: 'T3', status: 'In Transit', origin: '', destination: '', description: '', weight: 0, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null, vehicleType: null, vehiclePlate: null },
+      { id: '4', trackingNumber: 'T4', status: 'Delivered', origin: '', destination: '', description: '', weight: 0, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null, vehicleType: null, vehiclePlate: null },
     ]
 
     expect(store.statusCounts.All).toBe(4)
