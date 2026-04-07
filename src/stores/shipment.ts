@@ -4,7 +4,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { Shipment, ShipmentStatus, Transporter, NewShipmentPayload, NewTransporterPayload } from '@/types'
 import { supabase } from '@/utils/supabase/client'
 
-const USE_SUPABASE = !import.meta.env.DEV
+const USE_SUPABASE = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 
 function generateTrackingNumber(): string {
   const year = new Date().getFullYear()
@@ -56,6 +56,10 @@ export const useShipmentStore = defineStore('shipments', () => {
   const deliveryResults = ref<Record<string, { type: 'early' | 'on_time' | 'late'; diffMinutes: number }>>({})
   let simulationTickId: ReturnType<typeof setInterval> | null = null
 
+  const currentPage = ref(1)
+  const pageSize = ref(10)
+  const totalCount = ref(0)
+
   let supabaseChannel: RealtimeChannel | null = null
 
   const filteredShipments = computed(() => {
@@ -75,6 +79,14 @@ export const useShipmentStore = defineStore('shipments', () => {
     }
     return result
   })
+
+  const paginatedShipments = computed(() => {
+    if (USE_SUPABASE) return filteredShipments.value
+    const start = (currentPage.value - 1) * pageSize.value
+    return filteredShipments.value.slice(start, start + pageSize.value)
+  })
+
+  const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize.value)))
 
   const availableTransporters = computed(() => transporters.value.filter((t) => t.isAvailable))
 
@@ -104,16 +116,34 @@ export const useShipmentStore = defineStore('shipments', () => {
     error.value = null
     try {
       if (USE_SUPABASE) {
-        const { data, error: sbError } = await supabase
+        const from = (currentPage.value - 1) * pageSize.value
+        const to = from + pageSize.value - 1
+
+        let query = supabase
           .from('shipments')
-          .select('*')
+          .select('*', { count: 'exact' })
           .order('created_at', { ascending: false })
+          .range(from, to)
+
+        if (filterStatus.value !== 'All') {
+          query = query.eq('status', filterStatus.value)
+        }
+        if (searchQuery.value.trim()) {
+          const q = searchQuery.value.trim()
+          query = query.or(
+            `tracking_number.ilike.%${q}%,origin.ilike.%${q}%,destination.ilike.%${q}%,description.ilike.%${q}%`
+          )
+        }
+
+        const { data, error: sbError, count } = await query
         if (sbError) throw new Error(sbError.message)
         shipments.value = (data ?? []).map(mapShipment)
+        totalCount.value = count ?? 0
       } else {
         const response = await fetch('/api/shipments')
         const data = await response.json()
         shipments.value = data.shipments
+        totalCount.value = data.shipments.length
       }
     } catch (e) {
       error.value = 'Failed to fetch shipments'
@@ -121,6 +151,11 @@ export const useShipmentStore = defineStore('shipments', () => {
     } finally {
       isLoading.value = false
     }
+  }
+
+  async function setPage(page: number) {
+    currentPage.value = page
+    await fetchShipments()
   }
 
   async function fetchShipmentById(id: string) {
@@ -319,10 +354,12 @@ export const useShipmentStore = defineStore('shipments', () => {
 
   function setFilterStatus(status: ShipmentStatus | 'All') {
     filterStatus.value = status
+    currentPage.value = 1
   }
 
   function setSearchQuery(query: string) {
     searchQuery.value = query
+    currentPage.value = 1
   }
 
   function _syncShipmentLocal(updated: Shipment) {
@@ -489,9 +526,14 @@ export const useShipmentStore = defineStore('shipments', () => {
     filterStatus,
     searchQuery,
     now,
+    currentPage,
+    pageSize,
+    totalCount,
+    totalPages,
     shipmentCountdowns,
     deliveryResults,
     filteredShipments,
+    paginatedShipments,
     availableTransporters,
     statusCounts,
     unassignedCount,
@@ -503,6 +545,7 @@ export const useShipmentStore = defineStore('shipments', () => {
     addTransporter,
     setFilterStatus,
     setSearchQuery,
+    setPage,
     startRealtimeSimulation,
     stopRealtimeSimulation,
     startSupabaseRealtime,

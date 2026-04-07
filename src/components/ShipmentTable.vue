@@ -47,7 +47,7 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
     </div>
   </div>
 
-  <div v-else-if="store.filteredShipments.length === 0" class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm">
+  <div v-else-if="store.paginatedShipments.length === 0" class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm">
     <div class="flex flex-col items-center justify-center py-16">
       <div class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-zinc-400 dark:text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -62,6 +62,7 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
 
   <div v-else class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm overflow-hidden">
 
+    <!-- Desktop Table -->
     <div class="hidden md:block overflow-x-auto">
       <table class="w-full text-left border-collapse" id="shipment-table">
         <thead>
@@ -80,14 +81,14 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
         </thead>
         <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
           <tr
-            v-for="(shipment, index) in store.filteredShipments"
+            v-for="(shipment, index) in store.paginatedShipments"
             :key="shipment.id"
             class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors duration-150 cursor-pointer group"
             :class="isUntrackable(shipment) ? 'border-l-2 border-l-red-400 dark:border-l-red-500' : ''"
             @click="viewDetail(shipment.id)"
           >
             <td class="px-4 py-3.5">
-              <span class="text-xs text-zinc-400 dark:text-zinc-600 font-bold">{{ index + 1 }}</span>
+              <span class="text-xs text-zinc-400 dark:text-zinc-600 font-bold">{{ (store.currentPage - 1) * store.pageSize + index + 1 }}</span>
             </td>
 
             <td class="px-4 py-3.5">
@@ -150,9 +151,10 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
       </table>
     </div>
 
+    <!-- Mobile Cards -->
     <div class="md:hidden divide-y divide-zinc-200 dark:divide-zinc-800">
       <div
-        v-for="(shipment, index) in store.filteredShipments"
+        v-for="(shipment, index) in store.paginatedShipments"
         :key="shipment.id"
         class="p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
         :class="isUntrackable(shipment) ? 'border-l-2 border-l-red-400 dark:border-l-red-500' : ''"
@@ -160,7 +162,7 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
       >
         <div class="flex items-center justify-between mb-1.5">
           <div class="flex items-center gap-2">
-            <span class="text-xs text-zinc-400 font-bold">#{{ index + 1 }}</span>
+            <span class="text-xs text-zinc-400 font-bold">#{{ (store.currentPage - 1) * store.pageSize + index + 1 }}</span>
             <p class="text-zinc-900 dark:text-zinc-100 font-bold text-sm font-mono">{{ shipment.trackingNumber }}</p>
           </div>
           <StatusBadge :status="shipment.status" />
@@ -182,5 +184,56 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
         </div>
       </div>
     </div>
+
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3.5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20">
+      <p class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+        Showing
+        <span class="font-bold text-zinc-700 dark:text-zinc-300">
+          {{ Math.min((store.currentPage - 1) * store.pageSize + 1, store.totalCount) }}–{{ Math.min(store.currentPage * store.pageSize, store.totalCount) }}
+        </span>
+        of
+        <span class="font-bold text-zinc-700 dark:text-zinc-300">{{ store.totalCount }}</span>
+        shipments
+      </p>
+
+      <div class="flex items-center gap-1.5">
+        <button
+          id="btn-page-prev"
+          :disabled="store.currentPage <= 1 || store.isLoading"
+          @click="store.setPage(store.currentPage - 1)"
+          class="px-3 py-1.5 rounded border text-xs font-bold transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-400"
+        >
+          ← Prev
+        </button>
+
+        <template v-for="page in store.totalPages" :key="page">
+          <button
+            v-if="page === 1 || page === store.totalPages || Math.abs(page - store.currentPage) <= 1"
+            :id="`btn-page-${page}`"
+            @click="store.setPage(page)"
+            class="w-8 h-8 rounded border text-xs font-bold transition-all duration-150"
+            :class="page === store.currentPage
+              ? 'bg-orange-600 border-orange-600 text-white shadow-sm'
+              : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-400'"
+          >
+            {{ page }}
+          </button>
+          <span
+            v-else-if="page === store.currentPage - 2 || page === store.currentPage + 2"
+            class="text-zinc-400 text-xs px-0.5"
+          >…</span>
+        </template>
+
+        <button
+          id="btn-page-next"
+          :disabled="store.currentPage >= store.totalPages || store.isLoading"
+          @click="store.setPage(store.currentPage + 1)"
+          class="px-3 py-1.5 rounded border text-xs font-bold transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-400"
+        >
+          Next →
+        </button>
+      </div>
+    </div>
+
   </div>
 </template>

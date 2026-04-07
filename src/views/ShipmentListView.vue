@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useShipmentStore } from '@/stores/shipment'
 import { useToast } from 'vue-toastification'
 import ShipmentTable from '@/components/ShipmentTable.vue'
@@ -37,6 +37,10 @@ function handleTransporterCreated(name: string) {
   showAddTransporter.value = false
   toast.success(`Transporter "${name}" registered successfully!`)
 }
+
+watch([() => store.filterStatus, () => store.searchQuery], async () => {
+  await store.fetchShipments()
+})
 </script>
 
 <template>

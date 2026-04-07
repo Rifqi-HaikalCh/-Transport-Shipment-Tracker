@@ -9,7 +9,9 @@ import App from './App.vue'
 import router from './router'
 import { makeServer } from './server'
 
-if (import.meta.env.DEV) {
+const useSupabase = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
+
+if (import.meta.env.DEV && !useSupabase) {
   makeServer()
 }
 
