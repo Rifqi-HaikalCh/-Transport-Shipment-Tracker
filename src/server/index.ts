@@ -285,6 +285,53 @@ export function makeServer({ environment = 'development' } = {}) {
       this.get('/transporters', (schema: AppSchema) => {
         return schema.all('transporter')
       })
+
+      // POST /api/shipments — Create a new shipment
+      this.post('/shipments', (schema: AppSchema, request) => {
+        const body = JSON.parse(request.requestBody)
+        const year = new Date().getFullYear()
+        const seq = Math.floor(Math.random() * 900000 + 100000)
+        const trackingNumber = `TRK-${year}-${seq}`
+        const id = `shp-${Date.now()}`
+
+        const newShipment = schema.create('shipment', {
+          id,
+          trackingNumber,
+          origin: body.origin,
+          destination: body.destination,
+          description: body.description,
+          weight: body.weight,
+          estimatedDelivery: body.estimatedDelivery,
+          status: 'Pending',
+          transporterId: body.transporterId ?? null,
+          transporterName: body.transporterId
+            ? (schema.find('transporter', body.transporterId as string)?.attrs.name ?? null)
+            : null,
+          vehicleType: null,
+          vehiclePlate: null,
+          createdAt: new Date().toISOString().split('T')[0],
+        } as any)
+
+        return { shipment: newShipment.attrs }
+      })
+
+      // POST /api/transporters — Register a new transporter
+      this.post('/transporters', (schema: AppSchema, request) => {
+        const body = JSON.parse(request.requestBody)
+        const id = `tr-${Date.now()}`
+
+        const newTransporter = schema.create('transporter', {
+          id,
+          name: body.name,
+          phone: body.phone,
+          vehicleType: body.vehicleType,
+          vehiclePlate: body.vehiclePlate,
+          rating: body.rating ?? 4.0,
+          isAvailable: true,
+        } as any)
+
+        return { transporter: newTransporter.attrs }
+      })
     },
   })
 
