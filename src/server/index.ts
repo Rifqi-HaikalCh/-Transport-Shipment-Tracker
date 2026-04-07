@@ -4,7 +4,7 @@
  * Simulates a real REST API with realistic latency and proper HTTP status codes.
  * This replaces the need for a backend server during development.
  */
-import { createServer, Model, type Registry } from 'miragejs'
+import { createServer, Model, Response, type Registry } from 'miragejs'
 import type { ModelDefinition } from 'miragejs/-types'
 import type Schema from 'miragejs/orm/schema'
 import type { Shipment, Transporter } from '@/types'
@@ -226,7 +226,7 @@ export function makeServer({ environment = 'development' } = {}) {
       // GET /api/shipments/:id — Get single shipment detail
       this.get('/shipments/:id', (schema: AppSchema, request) => {
         const id = request.params.id
-        const shipment = schema.find('shipment', id)
+        const shipment = schema.find('shipment', id as string)
 
         if (!shipment) {
           return new Response(404, {}, { error: 'Shipment not found' })
@@ -240,12 +240,12 @@ export function makeServer({ environment = 'development' } = {}) {
         const shipmentId = request.params.id
         const { transporterId } = JSON.parse(request.requestBody)
 
-        const shipment = schema.find('shipment', shipmentId)
+        const shipment = schema.find('shipment', shipmentId as string)
         if (!shipment) {
           return new Response(404, {}, { error: 'Shipment not found' })
         }
 
-        const transporter = schema.find('transporter', transporterId)
+        const transporter = schema.find('transporter', transporterId as string)
         if (!transporter) {
           return new Response(400, {}, { error: 'Transporter not found' })
         }

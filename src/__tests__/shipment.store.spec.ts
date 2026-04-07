@@ -41,7 +41,7 @@ describe('Shipment Store', () => {
 
     store.setFilterStatus('Pending')
     expect(store.filteredShipments).toHaveLength(1)
-    expect(store.filteredShipments[0].id).toBe('1')
+    expect(store.filteredShipments[0]?.id).toBe('1')
 
     store.setFilterStatus('All')
     expect(store.filteredShipments).toHaveLength(2)
@@ -56,11 +56,11 @@ describe('Shipment Store', () => {
 
     store.setSearchQuery('Jakarta')
     expect(store.filteredShipments).toHaveLength(1)
-    expect(store.filteredShipments[0].origin).toBe('Jakarta')
+    expect(store.filteredShipments[0]?.origin).toBe('Jakarta')
 
     store.setSearchQuery('TRK-002')
     expect(store.filteredShipments).toHaveLength(1)
-    expect(store.filteredShipments[0].id).toBe('2')
+    expect(store.filteredShipments[0]?.id).toBe('2')
   })
 
   it('computes status counts correctly', () => {
