@@ -1,20 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Vue3Lottie } from 'vue3-lottie'
+import animationJson from '../../public/Global parcel shipment tracking.json'
 
 const emit = defineEmits<{ done: [] }>()
 
-const animationData = ref<object | null>(null)
+const animationData = ref<object | null>(animationJson)
 
 const visible = ref(true)
 const textVisible = ref(false)
 const exiting = ref(false)
 
 onMounted(async () => {
-  // Fetch the Lottie JSON from /public at runtime
-  const res = await fetch('/Global parcel shipment tracking.json')
-  animationData.value = await res.json()
-
   // Show app name text after animation has had a moment to display
   setTimeout(() => {
     textVisible.value = true

@@ -12,6 +12,38 @@ function generateTrackingNumber(): string {
   return `TRK-${year}-${seq}`
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapShipment(data: any): Shipment {
+  return {
+    id: data.id,
+    trackingNumber: data.tracking_number ?? data.trackingNumber,
+    origin: data.origin,
+    destination: data.destination,
+    status: data.status,
+    weight: data.weight,
+    estimatedDelivery: data.estimated_delivery ?? data.estimatedDelivery,
+    description: data.description,
+    transporterId: data.transporter_id ?? data.transporterId,
+    transporterName: data.transporter_name ?? data.transporterName,
+    vehicleType: data.vehicle_type ?? data.vehicleType,
+    vehiclePlate: data.vehicle_plate ?? data.vehiclePlate,
+    createdAt: data.created_at ?? data.createdAt,
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapTransporter(data: any): Transporter {
+  return {
+    id: data.id,
+    name: data.name,
+    phone: data.phone,
+    vehicleType: data.vehicle_type ?? data.vehicleType,
+    vehiclePlate: data.vehicle_plate ?? data.vehiclePlate,
+    rating: data.rating,
+    isAvailable: data.is_available ?? data.isAvailable,
+  }
+}
+
 export const useShipmentStore = defineStore('shipments', () => {
   const shipments = ref<Shipment[]>([])
   const transporters = ref<Transporter[]>([])
@@ -78,7 +110,7 @@ export const useShipmentStore = defineStore('shipments', () => {
           .select('*')
           .order('created_at', { ascending: false })
         if (sbError) throw new Error(sbError.message)
-        shipments.value = (data ?? []) as Shipment[]
+        shipments.value = (data ?? []).map(mapShipment)
       } else {
         const response = await fetch('/api/shipments')
         const data = await response.json()
@@ -103,8 +135,9 @@ export const useShipmentStore = defineStore('shipments', () => {
           .eq('id', id)
           .single()
         if (sbError) throw new Error(sbError.message)
-        selectedShipment.value = data as Shipment
-        return data as Shipment
+        const shipment = mapShipment(data)
+        selectedShipment.value = shipment
+        return shipment
       } else {
         const response = await fetch(`/api/shipments/${id}`)
         if (!response.ok) throw new Error('Shipment not found')
@@ -126,7 +159,7 @@ export const useShipmentStore = defineStore('shipments', () => {
       if (USE_SUPABASE) {
         const { data, error: sbError } = await supabase.from('transporters').select('*').order('name')
         if (sbError) throw new Error(sbError.message)
-        transporters.value = (data ?? []) as Transporter[]
+        transporters.value = (data ?? []).map(mapTransporter)
       } else {
         const response = await fetch('/api/transporters')
         const data = await response.json()
@@ -160,7 +193,7 @@ export const useShipmentStore = defineStore('shipments', () => {
           .single()
 
         if (sbError) throw new Error(sbError.message)
-        const updated = data as Shipment
+        const updated = mapShipment(data)
         _syncShipmentLocal(updated)
         return { success: true, shipment: updated }
       } else {
@@ -210,7 +243,7 @@ export const useShipmentStore = defineStore('shipments', () => {
           .select()
           .single()
         if (sbError) throw new Error(sbError.message)
-        const newShipment = data as Shipment
+        const newShipment = mapShipment(data)
         shipments.value.unshift(newShipment)
         return { success: true, shipment: newShipment }
       } else {
@@ -257,7 +290,7 @@ export const useShipmentStore = defineStore('shipments', () => {
           .select()
           .single()
         if (sbError) throw new Error(sbError.message)
-        const newT = data as Transporter
+        const newT = mapTransporter(data)
         transporters.value.push(newT)
         return { success: true, transporter: newT }
       } else {
@@ -377,12 +410,12 @@ export const useShipmentStore = defineStore('shipments', () => {
         { event: '*', schema: 'public', table: 'shipments' },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            const newShipment = payload.new as Shipment
+            const newShipment = mapShipment(payload.new)
             if (!shipments.value.find((s) => s.id === newShipment.id)) {
               shipments.value.unshift(newShipment)
             }
           } else if (payload.eventType === 'UPDATE') {
-            _syncShipmentLocal(payload.new as Shipment)
+            _syncShipmentLocal(mapShipment(payload.new))
           } else if (payload.eventType === 'DELETE') {
             const deleted = payload.old as { id: string }
             shipments.value = shipments.value.filter((s) => s.id !== deleted.id)
@@ -395,12 +428,12 @@ export const useShipmentStore = defineStore('shipments', () => {
         { event: '*', schema: 'public', table: 'transporters' },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            const newT = payload.new as Transporter
+            const newT = mapTransporter(payload.new)
             if (!transporters.value.find((t) => t.id === newT.id)) {
               transporters.value.push(newT)
             }
           } else if (payload.eventType === 'UPDATE') {
-            const updated = payload.new as Transporter
+            const updated = mapTransporter(payload.new)
             const idx = transporters.value.findIndex((t) => t.id === updated.id)
             if (idx !== -1) transporters.value[idx] = updated
           } else if (payload.eventType === 'DELETE') {
