@@ -18,17 +18,17 @@ function isActive(status: ShipmentStatus | 'All') {
       :key="status"
       :id="`filter-${status.toLowerCase().replace(' ', '-')}`"
       @click="store.setFilterStatus(status)"
-      class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
+      class="px-4 py-2 rounded text-sm font-medium transition-all duration-200 border"
       :class="
         isActive(status)
-          ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25'
-          : 'bg-white/5 text-surface-400 hover:bg-white/10 hover:text-white border border-white/5'
+          ? 'bg-orange-600 text-white border-orange-600 shadow-sm'
+          : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-orange-500 hover:text-orange-600 dark:hover:text-orange-500 shadow-sm'
       "
     >
       {{ status }}
       <span
         class="ml-1.5 text-xs"
-        :class="isActive(status) ? 'text-primary-200' : 'text-surface-500'"
+        :class="isActive(status) ? 'text-orange-200' : 'text-zinc-400 dark:text-zinc-500'"
       >
         {{ store.statusCounts[status] }}
       </span>
