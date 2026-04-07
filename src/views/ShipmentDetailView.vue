@@ -18,15 +18,16 @@ const toast = useToast()
 
 const shipment = ref<Shipment | null>(null)
 const showAssignModal = ref(false)
+const fetchError = ref<string | null>(null)
 const shipmentId = route.params.id as string
 
 onMounted(async () => {
+  fetchError.value = null
   const data = await store.fetchShipmentById(shipmentId)
   if (data) {
     shipment.value = data
   } else {
-    toast.error('Shipment not found')
-    router.push('/')
+    fetchError.value = `Shipment with ID "${shipmentId}" was not found or could not be loaded.`
     return
   }
   await store.fetchTransporters()
@@ -34,7 +35,6 @@ onMounted(async () => {
   store.startSupabaseRealtime()
 })
 
-// Deep watch on store shipments to detect real-time status changes (e.g. In Transit → Delivered)
 watch(
   () => store.shipments.find((s) => s.id === shipmentId),
   (updated) => {
@@ -105,8 +105,22 @@ function goBack() { router.push('/') }
       <span class="text-sm font-bold">Back to Shipments</span>
     </button>
 
-    <div v-if="store.isLoading && !shipment" class="flex items-center justify-center py-20">
+    <div v-if="store.isLoading && !shipment && !fetchError" class="flex items-center justify-center py-20">
       <div class="w-10 h-10 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
+    </div>
+
+    <div v-else-if="fetchError" class="flex flex-col items-center justify-center py-20 text-center">
+      <div class="w-20 h-20 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mb-5">
+        <AlertTriangle class="w-10 h-10 text-red-500" />
+      </div>
+      <h2 class="text-xl font-bold text-zinc-900 dark:text-white mb-2">Shipment Not Found</h2>
+      <p class="text-zinc-500 dark:text-zinc-400 text-sm max-w-sm mb-6">{{ fetchError }}</p>
+      <button
+        @click="router.push('/')"
+        class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold rounded transition-colors active:scale-95"
+      >
+        ← Back to Shipments
+      </button>
     </div>
 
     <div v-if="shipment" class="space-y-5">
