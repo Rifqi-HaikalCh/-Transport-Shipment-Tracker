@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router'
 import { useShipmentStore } from '@/stores/shipment'
 import StatusBadge from '@/components/StatusBadge.vue'
+import { AlertTriangle } from 'lucide-vue-next'
 
 const router = useRouter()
 const store = useShipmentStore()
@@ -16,6 +17,10 @@ function formatDate(dateStr: string) {
     day: 'numeric',
     year: 'numeric',
   })
+}
+
+function isUntrackable(s: { status: string; transporterId: string | null }) {
+  return s.status === 'Pending' && !s.transporterId
 }
 </script>
 
@@ -51,48 +56,65 @@ function formatDate(dateStr: string) {
       <table class="w-full text-left border-collapse" id="shipment-table">
         <thead>
           <tr class="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800">
-            <th class="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Tracking No.</th>
-            <th class="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Route</th>
-            <th class="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Transporter</th>
-            <th class="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Est. Delivery</th>
-            <th class="px-6 py-4 text-right text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Action</th>
+            <th class="px-5 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Tracking No.</th>
+            <th class="px-5 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Route</th>
+            <th class="px-5 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Status</th>
+            <th class="px-5 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Weight</th>
+            <th class="px-5 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Transporter</th>
+            <th class="px-5 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Est. Delivery</th>
+            <th class="px-5 py-4 text-right text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Action</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800">
           <tr
             v-for="shipment in store.filteredShipments"
             :key="shipment.id"
-            class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors duration-150 cursor-pointer group"
+            class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors duration-150 cursor-pointer group relative"
+            :class="isUntrackable(shipment) ? 'border-l-2 border-l-red-400 dark:border-l-red-500' : ''"
             @click="viewDetail(shipment.id)"
           >
-            <td class="px-6 py-4">
-              <p class="text-zinc-900 dark:text-zinc-100 font-semibold text-sm">{{ shipment.trackingNumber }}</p>
-              <p class="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5 font-medium">{{ shipment.weight }} kg</p>
+            <!-- Tracking Number -->
+            <td class="px-5 py-4">
+              <p class="text-zinc-900 dark:text-zinc-100 font-semibold text-sm font-mono">{{ shipment.trackingNumber }}</p>
+              <p v-if="isUntrackable(shipment)" class="flex items-center gap-1 text-red-500 dark:text-red-400 text-xs font-semibold mt-0.5">
+                <AlertTriangle class="w-3 h-3" />
+                Untrackable
+              </p>
             </td>
-            <td class="px-6 py-4">
+            <!-- Route -->
+            <td class="px-5 py-4">
               <div class="flex items-center gap-2 text-sm font-medium">
                 <span class="text-zinc-600 dark:text-zinc-300">{{ shipment.origin }}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-zinc-400 dark:text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
                 </svg>
                 <span class="text-zinc-600 dark:text-zinc-300">{{ shipment.destination }}</span>
               </div>
             </td>
-            <td class="px-6 py-4">
+            <!-- Status -->
+            <td class="px-5 py-4">
               <StatusBadge :status="shipment.status" />
             </td>
-            <td class="px-6 py-4">
-              <span v-if="shipment.transporterName" class="text-zinc-700 dark:text-zinc-300 text-sm font-medium">{{ shipment.transporterName }}</span>
-              <span v-else class="text-zinc-400 dark:text-zinc-500 text-sm italic font-medium">Unassigned</span>
+            <!-- Weight (own column) -->
+            <td class="px-5 py-4">
+              <span class="text-zinc-700 dark:text-zinc-300 text-sm font-semibold">{{ shipment.weight }}</span>
+              <span class="text-zinc-400 dark:text-zinc-500 text-xs font-medium ml-1">kg</span>
             </td>
-            <td class="px-6 py-4">
+            <!-- Transporter -->
+            <td class="px-5 py-4">
+              <span v-if="shipment.transporterName" class="text-zinc-700 dark:text-zinc-300 text-sm font-medium">{{ shipment.transporterName }}</span>
+              <span v-else class="inline-flex items-center gap-1 text-red-500 dark:text-red-400 text-sm font-semibold">
+                <AlertTriangle class="w-3.5 h-3.5" />
+                Not Assigned
+              </span>
+            </td>
+            <!-- Est. Delivery -->
+            <td class="px-5 py-4">
               <span class="text-zinc-600 dark:text-zinc-400 text-sm font-medium">{{ formatDate(shipment.estimatedDelivery) }}</span>
             </td>
-            <td class="px-6 py-4 text-right">
-              <button
-                class="text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity"
-              >
+            <!-- Action -->
+            <td class="px-5 py-4 text-right">
+              <button class="text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                 View →
               </button>
             </td>
@@ -106,24 +128,30 @@ function formatDate(dateStr: string) {
       <div
         v-for="shipment in store.filteredShipments"
         :key="shipment.id"
-        class="p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors active:bg-zinc-100 dark:active:bg-zinc-800 cursor-pointer"
+        class="p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors active:bg-zinc-100 dark:active:bg-zinc-800 cursor-pointer relative"
+        :class="isUntrackable(shipment) ? 'border-l-2 border-l-red-400 dark:border-l-red-500' : ''"
         @click="viewDetail(shipment.id)"
       >
-        <div class="flex items-center justify-between mb-3">
-          <p class="text-zinc-900 dark:text-zinc-100 font-bold text-sm">{{ shipment.trackingNumber }}</p>
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-zinc-900 dark:text-zinc-100 font-bold text-sm font-mono">{{ shipment.trackingNumber }}</p>
           <StatusBadge :status="shipment.status" />
         </div>
-        <div class="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-3">
+        <div class="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-2">
           <span>{{ shipment.origin }}</span>
           <span class="text-zinc-400 dark:text-zinc-500">→</span>
           <span>{{ shipment.destination }}</span>
         </div>
         <div class="flex items-center justify-between text-xs font-medium">
-          <span :class="shipment.transporterName ? 'text-zinc-700 dark:text-zinc-300' : 'text-zinc-400 dark:text-zinc-500 italic'">
-            {{ shipment.transporterName || 'Unassigned' }}
+          <span v-if="shipment.transporterName" class="text-zinc-700 dark:text-zinc-300">
+            {{ shipment.transporterName }}
+          </span>
+          <span v-else class="flex items-center gap-1 text-red-500 dark:text-red-400 font-semibold">
+            <AlertTriangle class="w-3 h-3" />
+            Not Assigned
           </span>
           <span class="text-zinc-500 dark:text-zinc-400">{{ formatDate(shipment.estimatedDelivery) }}</span>
         </div>
+        <div class="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500 font-medium">{{ shipment.weight }} kg</div>
       </div>
     </div>
   </div>
