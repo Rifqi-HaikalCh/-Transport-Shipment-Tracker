@@ -2,7 +2,7 @@
  * Pinia Store — Shipments
  *
  * Central state management for shipment data, including fetching,
- * filtering, and transporter assignment.
+ * filtering, transporter assignment, and CRUD for shipments & transporters.
  *
  * Data source strategy:
  *   - Development (npm run dev): Mirage.js intercepts fetch() calls → mock data
@@ -10,11 +10,18 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Shipment, ShipmentStatus, Transporter } from '@/types'
+import type { Shipment, ShipmentStatus, Transporter, NewShipmentPayload, NewTransporterPayload } from '@/types'
 import { supabase } from '@/utils/supabase/client'
 
 /** Use Supabase only in production; Mirage.js handles dev via fetch() intercepts */
 const USE_SUPABASE = !import.meta.env.DEV
+
+/** Helper: generate a TRK-YYYY-XXXXXX tracking number */
+function generateTrackingNumber(): string {
+  const year = new Date().getFullYear()
+  const seq = Math.floor(Math.random() * 900000 + 100000)
+  return `TRK-${year}-${seq}`
+}
 
 export const useShipmentStore = defineStore('shipments', () => {
   // ─── State ─────────────────────────────────────────────
@@ -64,6 +71,11 @@ export const useShipmentStore = defineStore('shipments', () => {
       }
     })
     return counts
+  })
+
+  /** Count of shipments with no transporter assigned (Untrackable) */
+  const unassignedCount = computed(() => {
+    return shipments.value.filter((s) => s.status === 'Pending' && !s.transporterId).length
   })
 
   // ─── Actions ───────────────────────────────────────────
@@ -151,7 +163,6 @@ export const useShipmentStore = defineStore('shipments', () => {
     try {
       if (USE_SUPABASE) {
         // ── Supabase (production) ──
-        // Find the transporter in local state (already fetched)
         const transporter = transporters.value.find((t) => t.id === transporterId)
         if (!transporter) throw new Error('Transporter not found')
         if (!transporter.isAvailable) throw new Error('Transporter is not available')
@@ -172,7 +183,6 @@ export const useShipmentStore = defineStore('shipments', () => {
         if (sbError) throw new Error(sbError.message)
         const updatedShipment = data as Shipment
 
-        // Sync local state
         const index = shipments.value.findIndex((s) => s.id === shipmentId)
         if (index !== -1) shipments.value[index] = updatedShipment
         if (selectedShipment.value?.id === shipmentId) selectedShipment.value = updatedShipment
@@ -194,11 +204,8 @@ export const useShipmentStore = defineStore('shipments', () => {
         const data = await response.json()
         const updatedShipment = data.shipment as Shipment
 
-        // Update in list
         const index = shipments.value.findIndex((s) => s.id === shipmentId)
         if (index !== -1) shipments.value[index] = updatedShipment
-
-        // Update selected if viewing detail
         if (selectedShipment.value?.id === shipmentId) selectedShipment.value = updatedShipment
 
         return { success: true, shipment: updatedShipment }
@@ -209,6 +216,101 @@ export const useShipmentStore = defineStore('shipments', () => {
       return { success: false, error: message }
     } finally {
       isLoading.value = false
+    }
+  }
+
+  /** Create a new shipment */
+  async function addShipment(payload: NewShipmentPayload) {
+    isLoading.value = true
+    error.value = null
+    try {
+      if (USE_SUPABASE) {
+        const { data, error: sbError } = await supabase
+          .from('shipments')
+          .insert({
+            tracking_number: generateTrackingNumber(),
+            origin: payload.origin,
+            destination: payload.destination,
+            description: payload.description,
+            weight: payload.weight,
+            estimated_delivery: payload.estimatedDelivery,
+            transporter_id: payload.transporterId ?? null,
+            status: 'Pending',
+          })
+          .select()
+          .single()
+
+        if (sbError) throw new Error(sbError.message)
+        const newShipment = data as Shipment
+        shipments.value.unshift(newShipment)
+        return { success: true, shipment: newShipment }
+      } else {
+        // Mirage.js (development)
+        const response = await fetch('/api/shipments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+          const errData = await response.json()
+          throw new Error(errData.error || 'Failed to create shipment')
+        }
+        const data = await response.json()
+        const newShipment = data.shipment as Shipment
+        shipments.value.unshift(newShipment)
+        return { success: true, shipment: newShipment }
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to create shipment'
+      error.value = message
+      return { success: false, error: message }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /** Register a new transporter */
+  async function addTransporter(payload: NewTransporterPayload) {
+    error.value = null
+    try {
+      if (USE_SUPABASE) {
+        const { data, error: sbError } = await supabase
+          .from('transporters')
+          .insert({
+            name: payload.name,
+            phone: payload.phone,
+            vehicle_type: payload.vehicleType,
+            vehicle_plate: payload.vehiclePlate,
+            rating: payload.rating ?? 4.0,
+            is_available: true,
+          })
+          .select()
+          .single()
+
+        if (sbError) throw new Error(sbError.message)
+        const newTransporter = data as Transporter
+        transporters.value.push(newTransporter)
+        return { success: true, transporter: newTransporter }
+      } else {
+        // Mirage.js (development)
+        const response = await fetch('/api/transporters', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+          const errData = await response.json()
+          throw new Error(errData.error || 'Failed to add transporter')
+        }
+        const data = await response.json()
+        const newTransporter = data.transporter as Transporter
+        transporters.value.push(newTransporter)
+        return { success: true, transporter: newTransporter }
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to add transporter'
+      error.value = message
+      return { success: false, error: message }
     }
   }
 
@@ -223,40 +325,27 @@ export const useShipmentStore = defineStore('shipments', () => {
   /**
    * Real-time Update Simulation
    *
-   * Uses setInterval to periodically advance a random active shipment
-   * to its next logical status, simulating live tracking updates.
+   * Only advances shipments that are ASSIGNED (have a transporterId) AND are In Transit.
+   * Untrackable (Pending without transporter) shipments are NOT progressed.
    */
   function startRealtimeSimulation(intervalMs = 8000) {
     if (realtimeIntervalId.value) return // already running
 
     realtimeIntervalId.value = setInterval(() => {
-      const progressMap: Partial<Record<ShipmentStatus, ShipmentStatus>> = {
-        Pending: 'In Transit',
-        'In Transit': 'Delivered',
-      }
-
-      // Pick a random active (Pending or In Transit) shipment
+      // Only shipments that are "In Transit" AND have a transporter can be auto-progressed
       const active = shipments.value.filter(
-        (s) => s.status === 'Pending' || s.status === 'In Transit',
+        (s) => s.status === 'In Transit' && s.transporterId !== null,
       )
-      if (active.length === 0) {
-        stopRealtimeSimulation()
-        return
-      }
+      if (active.length === 0) return
 
       const target = active[Math.floor(Math.random() * active.length)]!
-      const nextStatus = progressMap[target.status]
-      if (!nextStatus) return
-
-      // Update in-place
       const idx = shipments.value.findIndex((s) => s.id === target.id)
       if (idx !== -1) {
-        shipments.value[idx] = { ...shipments.value[idx], status: nextStatus } as typeof shipments.value[0]
+        shipments.value[idx] = { ...shipments.value[idx], status: 'Delivered' } as typeof shipments.value[0]
       }
 
-      // Also update selectedShipment if it's the same one
       if (selectedShipment.value?.id === target.id) {
-        selectedShipment.value = { ...selectedShipment.value, status: nextStatus } as typeof shipments.value[0]
+        selectedShipment.value = { ...selectedShipment.value, status: 'Delivered' } as typeof shipments.value[0]
       }
     }, intervalMs)
   }
@@ -281,11 +370,14 @@ export const useShipmentStore = defineStore('shipments', () => {
     filteredShipments,
     availableTransporters,
     statusCounts,
+    unassignedCount,
     // Actions
     fetchShipments,
     fetchShipmentById,
     fetchTransporters,
     assignTransporter,
+    addShipment,
+    addTransporter,
     setFilterStatus,
     setSearchQuery,
     startRealtimeSimulation,
