@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useShipmentStore } from '@/stores/shipment'
 import { useToast } from 'vue-toastification'
 import AssignTransporterModal from '@/components/AssignTransporterModal.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
+import { Clock } from 'lucide-vue-next'
 import type { Shipment } from '@/types'
 
 const route = useRoute()
@@ -27,6 +28,36 @@ onMounted(async () => {
   }
   await store.fetchTransporters()
 })
+
+// Keep local shipment ref in sync when store.shipments updates
+// (handles realtime simulation ticking status on detail page)
+watch(
+  () => store.shipments.find((s) => s.id === shipmentId),
+  (updated) => {
+    if (updated && shipment.value) {
+      shipment.value = { ...shipment.value, ...updated }
+    }
+  },
+)
+
+// Live countdown for this specific shipment
+const countdown = computed(() => store.shipmentCountdowns[shipmentId])
+
+function formatCountdown(seconds: number): string {
+  if (seconds <= 0) return 'Arriving soon...'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}h ${m}m remaining`
+  if (m > 0) return `${m}m ${s}s remaining`
+  return `${s}s remaining`
+}
+
+function countdownColor(seconds: number): string {
+  if (seconds <= 30) return 'text-red-500 dark:text-red-400'
+  if (seconds <= 120) return 'text-amber-500 dark:text-amber-400'
+  return 'text-green-600 dark:text-green-400'
+}
 
 function openAssignModal() {
   showAssignModal.value = true
@@ -199,7 +230,18 @@ function goBack() {
             </div>
             <div class="flex justify-between items-center py-2.5 border-b border-zinc-100 dark:border-zinc-800/50">
               <span class="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Est. Delivery</span>
-              <span class="text-zinc-900 dark:text-white font-bold">{{ formatDate(shipment.estimatedDelivery) }}</span>
+              <div class="text-right">
+                <template v-if="countdown !== undefined">
+                  <div class="flex items-center justify-end gap-1.5 mb-0.5">
+                    <Clock class="w-3.5 h-3.5" :class="countdownColor(countdown)" />
+                    <span class="font-bold text-sm tabular-nums" :class="countdownColor(countdown)">
+                      {{ formatCountdown(countdown) }}
+                    </span>
+                  </div>
+                  <span class="text-zinc-400 dark:text-zinc-500 text-xs font-medium">{{ formatDate(shipment!.estimatedDelivery) }}</span>
+                </template>
+                <span v-else class="text-zinc-900 dark:text-white font-bold">{{ formatDate(shipment!.estimatedDelivery) }}</span>
+              </div>
             </div>
           </div>
         </div>
