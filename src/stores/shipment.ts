@@ -1,22 +1,24 @@
 /**
  * Pinia Store — Shipments
  *
- * Central state management for shipment data, including fetching,
- * filtering, transporter assignment, and CRUD for shipments & transporters.
- *
  * Data source strategy:
- *   - Development (npm run dev): Mirage.js intercepts fetch() calls → mock data
- *   - Production: Supabase client queries real database tables
+ *   - Development: Mirage.js intercepts fetch() calls → mock data + local simulation
+ *   - Production: Supabase queries + Supabase Realtime channel for live DB updates
+ *
+ * Simulation (dev only):
+ *   - Every real second = ~5 simulated minutes of freight time
+ *   - Pending+assigned shipments transition to In Transit after ~20s
+ *   - In Transit shipments have a ticking countdown; status → Delivered at 0
+ *   - `shipmentCountdowns` exposes seconds-remaining per shipment for the UI
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { Shipment, ShipmentStatus, Transporter, NewShipmentPayload, NewTransporterPayload } from '@/types'
 import { supabase } from '@/utils/supabase/client'
 
-/** Use Supabase only in production; Mirage.js handles dev via fetch() intercepts */
 const USE_SUPABASE = !import.meta.env.DEV
 
-/** Helper: generate a TRK-YYYY-XXXXXX tracking number */
 function generateTrackingNumber(): string {
   const year = new Date().getFullYear()
   const seq = Math.floor(Math.random() * 900000 + 100000)
@@ -32,18 +34,25 @@ export const useShipmentStore = defineStore('shipments', () => {
   const error = ref<string | null>(null)
   const filterStatus = ref<ShipmentStatus | 'All'>('All')
   const searchQuery = ref('')
-  const realtimeIntervalId = ref<ReturnType<typeof setInterval> | null>(null)
+
+  // ─── Realtime Simulation State ─────────────────────────
+  /** Reactive unix timestamp (seconds), updated every second during simulation */
+  const now = ref(Math.floor(Date.now() / 1000))
+  /** shipmentId → unix timestamp when it should become Delivered */
+  const scheduledDeliveries = ref<Record<string, number>>({})
+  /** shipmentId → unix timestamp when Pending+assigned should become In Transit */
+  const scheduledTransitions = ref<Record<string, number>>({})
+  let simulationTickId: ReturnType<typeof setInterval> | null = null
+
+  // ─── Supabase Realtime  ─────────────────────────────────
+  let supabaseChannel: RealtimeChannel | null = null
 
   // ─── Getters ───────────────────────────────────────────
   const filteredShipments = computed(() => {
     let result = shipments.value
-
-    // Filter by status
     if (filterStatus.value !== 'All') {
       result = result.filter((s) => s.status === filterStatus.value)
     }
-
-    // Filter by search query
     if (searchQuery.value.trim()) {
       const query = searchQuery.value.toLowerCase()
       result = result.filter(
@@ -54,28 +63,35 @@ export const useShipmentStore = defineStore('shipments', () => {
           s.description.toLowerCase().includes(query),
       )
     }
-
     return result
   })
 
-  const availableTransporters = computed(() => {
-    return transporters.value.filter((t) => t.isAvailable)
-  })
+  const availableTransporters = computed(() => transporters.value.filter((t) => t.isAvailable))
 
   const statusCounts = computed(() => {
     const counts = { All: 0, Pending: 0, 'In Transit': 0, Delivered: 0, Cancelled: 0 }
     counts.All = shipments.value.length
     shipments.value.forEach((s) => {
-      if (s.status in counts) {
-        counts[s.status as ShipmentStatus]++
-      }
+      if (s.status in counts) counts[s.status as ShipmentStatus]++
     })
     return counts
   })
 
-  /** Count of shipments with no transporter assigned (Untrackable) */
-  const unassignedCount = computed(() => {
-    return shipments.value.filter((s) => s.status === 'Pending' && !s.transporterId).length
+  const unassignedCount = computed(
+    () => shipments.value.filter((s) => s.status === 'Pending' && !s.transporterId).length,
+  )
+
+  /**
+   * Per-shipment countdown in seconds remaining until simulated delivery.
+   * Only present for In Transit shipments that have been scheduled.
+   * The UI uses this to render a live countdown instead of a static date.
+   */
+  const shipmentCountdowns = computed(() => {
+    const result: Record<string, number> = {}
+    for (const [id, deliveryTime] of Object.entries(scheduledDeliveries.value)) {
+      result[id] = Math.max(0, deliveryTime - now.value)
+    }
+    return result
   })
 
   // ─── Actions ───────────────────────────────────────────
@@ -84,7 +100,6 @@ export const useShipmentStore = defineStore('shipments', () => {
     error.value = null
     try {
       if (USE_SUPABASE) {
-        // ── Supabase (production) ──
         const { data, error: sbError } = await supabase
           .from('shipments')
           .select('*')
@@ -92,7 +107,6 @@ export const useShipmentStore = defineStore('shipments', () => {
         if (sbError) throw new Error(sbError.message)
         shipments.value = (data ?? []) as Shipment[]
       } else {
-        // ── Mirage.js (development) ──
         const response = await fetch('/api/shipments')
         const data = await response.json()
         shipments.value = data.shipments
@@ -110,7 +124,6 @@ export const useShipmentStore = defineStore('shipments', () => {
     error.value = null
     try {
       if (USE_SUPABASE) {
-        // ── Supabase (production) ──
         const { data, error: sbError } = await supabase
           .from('shipments')
           .select('*')
@@ -120,7 +133,6 @@ export const useShipmentStore = defineStore('shipments', () => {
         selectedShipment.value = data as Shipment
         return data as Shipment
       } else {
-        // ── Mirage.js (development) ──
         const response = await fetch(`/api/shipments/${id}`)
         if (!response.ok) throw new Error('Shipment not found')
         const data = await response.json()
@@ -139,15 +151,10 @@ export const useShipmentStore = defineStore('shipments', () => {
   async function fetchTransporters() {
     try {
       if (USE_SUPABASE) {
-        // ── Supabase (production) ──
-        const { data, error: sbError } = await supabase
-          .from('transporters')
-          .select('*')
-          .order('name')
+        const { data, error: sbError } = await supabase.from('transporters').select('*').order('name')
         if (sbError) throw new Error(sbError.message)
         transporters.value = (data ?? []) as Transporter[]
       } else {
-        // ── Mirage.js (development) ──
         const response = await fetch('/api/transporters')
         const data = await response.json()
         transporters.value = data.transporters
@@ -162,7 +169,6 @@ export const useShipmentStore = defineStore('shipments', () => {
     error.value = null
     try {
       if (USE_SUPABASE) {
-        // ── Supabase (production) ──
         const transporter = transporters.value.find((t) => t.id === transporterId)
         if (!transporter) throw new Error('Transporter not found')
         if (!transporter.isAvailable) throw new Error('Transporter is not available')
@@ -181,34 +187,27 @@ export const useShipmentStore = defineStore('shipments', () => {
           .single()
 
         if (sbError) throw new Error(sbError.message)
-        const updatedShipment = data as Shipment
-
-        const index = shipments.value.findIndex((s) => s.id === shipmentId)
-        if (index !== -1) shipments.value[index] = updatedShipment
-        if (selectedShipment.value?.id === shipmentId) selectedShipment.value = updatedShipment
-
-        return { success: true, shipment: updatedShipment }
+        const updated = data as Shipment
+        _syncShipmentLocal(updated)
+        return { success: true, shipment: updated }
       } else {
-        // ── Mirage.js (development) ──
         const response = await fetch(`/api/shipments/${shipmentId}/assign`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ transporterId }),
         })
-
         if (!response.ok) {
           const errData = await response.json()
           throw new Error(errData.error || 'Failed to assign transporter')
         }
-
         const data = await response.json()
-        const updatedShipment = data.shipment as Shipment
+        const updated = data.shipment as Shipment
+        _syncShipmentLocal(updated)
 
-        const index = shipments.value.findIndex((s) => s.id === shipmentId)
-        if (index !== -1) shipments.value[index] = updatedShipment
-        if (selectedShipment.value?.id === shipmentId) selectedShipment.value = updatedShipment
+        // Schedule delivery countdown for the newly assigned shipment
+        _scheduleDelivery(shipmentId)
 
-        return { success: true, shipment: updatedShipment }
+        return { success: true, shipment: updated }
       }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to assign transporter'
@@ -219,7 +218,6 @@ export const useShipmentStore = defineStore('shipments', () => {
     }
   }
 
-  /** Create a new shipment */
   async function addShipment(payload: NewShipmentPayload) {
     isLoading.value = true
     error.value = null
@@ -239,13 +237,11 @@ export const useShipmentStore = defineStore('shipments', () => {
           })
           .select()
           .single()
-
         if (sbError) throw new Error(sbError.message)
         const newShipment = data as Shipment
         shipments.value.unshift(newShipment)
         return { success: true, shipment: newShipment }
       } else {
-        // Mirage.js (development)
         const response = await fetch('/api/shipments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -258,6 +254,10 @@ export const useShipmentStore = defineStore('shipments', () => {
         const data = await response.json()
         const newShipment = data.shipment as Shipment
         shipments.value.unshift(newShipment)
+
+        // If shipment was created with a transporter, schedule countdown
+        if (newShipment.transporterId) _scheduleDelivery(newShipment.id)
+
         return { success: true, shipment: newShipment }
       }
     } catch (e: unknown) {
@@ -269,7 +269,6 @@ export const useShipmentStore = defineStore('shipments', () => {
     }
   }
 
-  /** Register a new transporter */
   async function addTransporter(payload: NewTransporterPayload) {
     error.value = null
     try {
@@ -286,13 +285,11 @@ export const useShipmentStore = defineStore('shipments', () => {
           })
           .select()
           .single()
-
         if (sbError) throw new Error(sbError.message)
-        const newTransporter = data as Transporter
-        transporters.value.push(newTransporter)
-        return { success: true, transporter: newTransporter }
+        const newT = data as Transporter
+        transporters.value.push(newT)
+        return { success: true, transporter: newT }
       } else {
-        // Mirage.js (development)
         const response = await fetch('/api/transporters', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -303,9 +300,9 @@ export const useShipmentStore = defineStore('shipments', () => {
           throw new Error(errData.error || 'Failed to add transporter')
         }
         const data = await response.json()
-        const newTransporter = data.transporter as Transporter
-        transporters.value.push(newTransporter)
-        return { success: true, transporter: newTransporter }
+        const newT = data.transporter as Transporter
+        transporters.value.push(newT)
+        return { success: true, transporter: newT }
       }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to add transporter'
@@ -322,38 +319,161 @@ export const useShipmentStore = defineStore('shipments', () => {
     searchQuery.value = query
   }
 
+  // ─── Private Helpers ────────────────────────────────────
+  function _syncShipmentLocal(updated: Shipment) {
+    const idx = shipments.value.findIndex((s) => s.id === updated.id)
+    if (idx !== -1) shipments.value[idx] = updated
+    if (selectedShipment.value?.id === updated.id) selectedShipment.value = updated
+  }
+
+  /** Schedule a delivery countdown for a given shipment ID (dev simulation) */
+  function _scheduleDelivery(shipmentId: string, delaySec?: number) {
+    const t = Math.floor(Date.now() / 1000)
+    // 90–300 seconds (1.5–5 min) — visible countdown in the demo
+    const delay = delaySec ?? 90 + Math.floor(Math.random() * 210)
+    scheduledDeliveries.value = { ...scheduledDeliveries.value, [shipmentId]: t + delay }
+  }
+
+  // ─── Real-time Simulation (Dev only) ───────────────────
   /**
-   * Real-time Update Simulation
-   *
-   * Only advances shipments that are ASSIGNED (have a transporterId) AND are In Transit.
-   * Untrackable (Pending without transporter) shipments are NOT progressed.
+   * Starts a per-second simulation tick:
+   *  - Pending + assigned → "In Transit" after ~20-60s (transition delay)
+   *  - In Transit + assigned → "Delivered" when countdown hits 0  (90-300s)
+   *  - `shipmentCountdowns` reactive ref drives the live countdown UI
    */
-  function startRealtimeSimulation(intervalMs = 8000) {
-    if (realtimeIntervalId.value) return // already running
+  function startRealtimeSimulation() {
+    if (simulationTickId !== null) return
 
-    realtimeIntervalId.value = setInterval(() => {
-      // Only shipments that are "In Transit" AND have a transporter can be auto-progressed
-      const active = shipments.value.filter(
-        (s) => s.status === 'In Transit' && s.transporterId !== null,
-      )
-      if (active.length === 0) return
+    const t = Math.floor(Date.now() / 1000)
 
-      const target = active[Math.floor(Math.random() * active.length)]!
-      const idx = shipments.value.findIndex((s) => s.id === target.id)
-      if (idx !== -1) {
-        shipments.value[idx] = { ...shipments.value[idx], status: 'Delivered' } as typeof shipments.value[0]
+    // Schedule existing In Transit + assigned shipments for delivery
+    shipments.value
+      .filter((s) => s.status === 'In Transit' && s.transporterId)
+      .forEach((s) => _scheduleDelivery(s.id))
+
+    // Schedule existing Pending + assigned shipments for In Transit transition
+    shipments.value
+      .filter((s) => s.status === 'Pending' && s.transporterId)
+      .forEach((s) => {
+        const delay = 20 + Math.floor(Math.random() * 40) // 20-60s
+        scheduledTransitions.value = { ...scheduledTransitions.value, [s.id]: t + delay }
+      })
+
+    simulationTickId = setInterval(() => {
+      const ts = Math.floor(Date.now() / 1000)
+      now.value = ts
+
+      // Process Pending → In Transit transitions
+      const transitions = { ...scheduledTransitions.value }
+      for (const [id, transitionAt] of Object.entries(transitions)) {
+        if (ts >= transitionAt) {
+          const idx = shipments.value.findIndex((s) => s.id === id)
+          if (idx !== -1 && shipments.value[idx]?.status === 'Pending' && shipments.value[idx]?.transporterId) {
+            shipments.value[idx] = { ...(shipments.value[idx] as Shipment), status: 'In Transit' }
+            if (selectedShipment.value?.id === id) {
+              selectedShipment.value = { ...selectedShipment.value, status: 'In Transit' }
+            }
+            _scheduleDelivery(id)
+          }
+          const next = { ...scheduledTransitions.value }
+          delete next[id]
+          scheduledTransitions.value = next
+        }
       }
 
-      if (selectedShipment.value?.id === target.id) {
-        selectedShipment.value = { ...selectedShipment.value, status: 'Delivered' } as typeof shipments.value[0]
+      // Process In Transit → Delivered when countdown hits zero
+      const deliveries = { ...scheduledDeliveries.value }
+      for (const [id, deliverAt] of Object.entries(deliveries)) {
+        if (ts >= deliverAt) {
+          const idx = shipments.value.findIndex((s) => s.id === id)
+          if (idx !== -1 && shipments.value[idx]?.status === 'In Transit') {
+            shipments.value[idx] = { ...(shipments.value[idx] as Shipment), status: 'Delivered' }
+            if (selectedShipment.value?.id === id) {
+              selectedShipment.value = { ...selectedShipment.value, status: 'Delivered' }
+            }
+          }
+          const next = { ...scheduledDeliveries.value }
+          delete next[id]
+          scheduledDeliveries.value = next
+        }
       }
-    }, intervalMs)
+    }, 1000)
   }
 
   function stopRealtimeSimulation() {
-    if (realtimeIntervalId.value) {
-      clearInterval(realtimeIntervalId.value)
-      realtimeIntervalId.value = null
+    if (simulationTickId !== null) {
+      clearInterval(simulationTickId)
+      simulationTickId = null
+    }
+    scheduledDeliveries.value = {}
+    scheduledTransitions.value = {}
+  }
+
+  // ─── Supabase Realtime (Production) ────────────────────
+  /**
+   * Subscribes to Postgres changes on 'shipments' and 'transporters' tables.
+   * Any INSERT/UPDATE/DELETE from any client or from the DB triggers a local
+   * state update — making the UI automatically reflect database changes.
+   *
+   * Requires RLS policies to allow SELECT, and Realtime enabled on the tables
+   * in the Supabase Dashboard → Database → Replication.
+   */
+  function startSupabaseRealtime() {
+    if (!USE_SUPABASE) return
+    if (supabaseChannel) return // already subscribed
+
+    supabaseChannel = supabase
+      .channel('shiptrack-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shipments' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newShipment = payload.new as Shipment
+            if (!shipments.value.find((s) => s.id === newShipment.id)) {
+              shipments.value.unshift(newShipment)
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            _syncShipmentLocal(payload.new as Shipment)
+          } else if (payload.eventType === 'DELETE') {
+            const deleted = payload.old as { id: string }
+            shipments.value = shipments.value.filter((s) => s.id !== deleted.id)
+            if (selectedShipment.value?.id === deleted.id) selectedShipment.value = null
+          }
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transporters' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newT = payload.new as Transporter
+            if (!transporters.value.find((t) => t.id === newT.id)) {
+              transporters.value.push(newT)
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as Transporter
+            const idx = transporters.value.findIndex((t) => t.id === updated.id)
+            if (idx !== -1) transporters.value[idx] = updated
+          } else if (payload.eventType === 'DELETE') {
+            const deleted = payload.old as { id: string }
+            transporters.value = transporters.value.filter((t) => t.id !== deleted.id)
+          }
+        },
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.info('[ShipTrack] Supabase Realtime connected ✓')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.warn('[ShipTrack] Supabase Realtime connection error')
+        }
+      })
+  }
+
+  function stopSupabaseRealtime() {
+    if (supabaseChannel) {
+      supabase.removeChannel(supabaseChannel)
+      supabaseChannel = null
     }
   }
 
@@ -366,6 +486,8 @@ export const useShipmentStore = defineStore('shipments', () => {
     error,
     filterStatus,
     searchQuery,
+    now,
+    shipmentCountdowns,
     // Getters
     filteredShipments,
     availableTransporters,
@@ -380,7 +502,11 @@ export const useShipmentStore = defineStore('shipments', () => {
     addTransporter,
     setFilterStatus,
     setSearchQuery,
+    // Simulation
     startRealtimeSimulation,
     stopRealtimeSimulation,
+    // Supabase Realtime
+    startSupabaseRealtime,
+    stopSupabaseRealtime,
   }
 })
