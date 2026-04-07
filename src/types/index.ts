@@ -15,6 +15,8 @@ export interface Shipment {
   createdAt: string // ISO date string
   transporterId: string | null
   transporterName: string | null
+  vehicleType: string | null // vehicle type of assigned transporter
+  vehiclePlate: string | null // vehicle plate of assigned transporter
   description: string
 }
 
