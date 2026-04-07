@@ -12,17 +12,14 @@ const textVisible = ref(false)
 const exiting = ref(false)
 
 onMounted(async () => {
-  // Show app name text after animation has had a moment to display
   setTimeout(() => {
     textVisible.value = true
   }, 800)
 
-  // Start exit animation
   setTimeout(() => {
     exiting.value = true
   }, 3000)
 
-  // Emit done after exit animation completes
   setTimeout(() => {
     visible.value = false
     emit('done')
@@ -37,12 +34,10 @@ onMounted(async () => {
       class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-950"
       :class="{ 'splash-exit': exiting }"
     >
-      <!-- Background accent glow -->
       <div class="absolute inset-0 overflow-hidden pointer-events-none">
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-orange-600/5 blur-3xl"></div>
       </div>
 
-      <!-- Lottie Animation -->
       <div class="relative w-72 h-72 sm:w-80 sm:h-80">
         <Vue3Lottie
           v-if="animationData"
@@ -53,7 +48,6 @@ onMounted(async () => {
         />
       </div>
 
-      <!-- App Name & Tagline -->
       <div
         class="mt-2 text-center transition-all duration-700"
         :class="textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
