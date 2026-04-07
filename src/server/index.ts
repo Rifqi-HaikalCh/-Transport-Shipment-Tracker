@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type */
 import { createServer, Model, Response, type Registry } from 'miragejs'
 import type { ModelDefinition } from 'miragejs/-types'
 import type Schema from 'miragejs/orm/schema'

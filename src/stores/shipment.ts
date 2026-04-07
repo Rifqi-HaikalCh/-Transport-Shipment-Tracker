@@ -12,35 +12,33 @@ function generateTrackingNumber(): string {
   return `TRK-${year}-${seq}`
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapShipment(data: any): Shipment {
+function mapShipment(data: Record<string, unknown>): Shipment {
   return {
-    id: data.id,
-    trackingNumber: data.tracking_number ?? data.trackingNumber,
-    origin: data.origin,
-    destination: data.destination,
-    status: data.status,
-    weight: data.weight,
-    estimatedDelivery: data.estimated_delivery ?? data.estimatedDelivery,
-    description: data.description,
-    transporterId: data.transporter_id ?? data.transporterId,
-    transporterName: data.transporter_name ?? data.transporterName,
-    vehicleType: data.vehicle_type ?? data.vehicleType,
-    vehiclePlate: data.vehicle_plate ?? data.vehiclePlate,
-    createdAt: data.created_at ?? data.createdAt,
+    id: data.id as string,
+    trackingNumber: (data.tracking_number ?? data.trackingNumber) as string,
+    origin: data.origin as string,
+    destination: data.destination as string,
+    status: data.status as ShipmentStatus,
+    weight: data.weight as number,
+    estimatedDelivery: (data.estimated_delivery ?? data.estimatedDelivery) as string,
+    description: data.description as string,
+    transporterId: (data.transporter_id ?? data.transporterId) as string | null,
+    transporterName: (data.transporter_name ?? data.transporterName) as string | null,
+    vehicleType: (data.vehicle_type ?? data.vehicleType) as string | null,
+    vehiclePlate: (data.vehicle_plate ?? data.vehiclePlate) as string | null,
+    createdAt: (data.created_at ?? data.createdAt) as string,
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapTransporter(data: any): Transporter {
+function mapTransporter(data: Record<string, unknown>): Transporter {
   return {
-    id: data.id,
-    name: data.name,
-    phone: data.phone,
-    vehicleType: data.vehicle_type ?? data.vehicleType,
-    vehiclePlate: data.vehicle_plate ?? data.vehiclePlate,
-    rating: data.rating,
-    isAvailable: data.is_available ?? data.isAvailable,
+    id: data.id as string,
+    name: data.name as string,
+    phone: data.phone as string,
+    vehicleType: (data.vehicle_type ?? data.vehicleType) as string,
+    vehiclePlate: (data.vehicle_plate ?? data.vehiclePlate) as string,
+    rating: data.rating as number,
+    isAvailable: (data.is_available ?? data.isAvailable) as boolean,
   }
 }
 
@@ -55,6 +53,7 @@ export const useShipmentStore = defineStore('shipments', () => {
   const now = ref(Math.floor(Date.now() / 1000))
   const scheduledDeliveries = ref<Record<string, number>>({})
   const scheduledTransitions = ref<Record<string, number>>({})
+  const deliveryResults = ref<Record<string, { type: 'early' | 'on_time' | 'late'; diffMinutes: number }>>({})
   let simulationTickId: ReturnType<typeof setInterval> | null = null
 
   let supabaseChannel: RealtimeChannel | null = null
@@ -137,13 +136,16 @@ export const useShipmentStore = defineStore('shipments', () => {
         if (sbError) throw new Error(sbError.message)
         const shipment = mapShipment(data)
         selectedShipment.value = shipment
+        _syncShipmentLocal(shipment)
         return shipment
       } else {
         const response = await fetch(`/api/shipments/${id}`)
         if (!response.ok) throw new Error('Shipment not found')
         const data = await response.json()
-        selectedShipment.value = data.shipment
-        return data.shipment as Shipment
+        const shipment = data.shipment as Shipment
+        selectedShipment.value = shipment
+        _syncShipmentLocal(shipment)
+        return shipment
       }
     } catch (e) {
       error.value = 'Failed to fetch shipment details'
@@ -325,7 +327,11 @@ export const useShipmentStore = defineStore('shipments', () => {
 
   function _syncShipmentLocal(updated: Shipment) {
     const idx = shipments.value.findIndex((s) => s.id === updated.id)
-    if (idx !== -1) shipments.value[idx] = updated
+    if (idx !== -1) {
+      shipments.value[idx] = updated
+    } else {
+      shipments.value.push(updated)
+    }
     if (selectedShipment.value?.id === updated.id) selectedShipment.value = updated
   }
 
@@ -377,9 +383,25 @@ export const useShipmentStore = defineStore('shipments', () => {
         if (ts >= deliverAt) {
           const idx = shipments.value.findIndex((s) => s.id === id)
           if (idx !== -1 && shipments.value[idx]?.status === 'In Transit') {
-            shipments.value[idx] = { ...(shipments.value[idx] as Shipment), status: 'Delivered' }
+            const ship = shipments.value[idx] as Shipment
+            shipments.value[idx] = { ...ship, status: 'Delivered' }
             if (selectedShipment.value?.id === id) {
               selectedShipment.value = { ...selectedShipment.value, status: 'Delivered' }
+            }
+
+            if (ship.estimatedDelivery) {
+              const estimatedTs = Math.floor(new Date(ship.estimatedDelivery).getTime() / 1000)
+              const diffSec = ts - estimatedTs
+              const diffMinutes = Math.abs(Math.round(diffSec / 60))
+              let type: 'early' | 'on_time' | 'late'
+              if (Math.abs(diffSec) <= 300) {
+                type = 'on_time'
+              } else if (diffSec < 0) {
+                type = 'early'
+              } else {
+                type = 'late'
+              }
+              deliveryResults.value = { ...deliveryResults.value, [id]: { type, diffMinutes } }
             }
           }
           const next = { ...scheduledDeliveries.value }
@@ -468,6 +490,7 @@ export const useShipmentStore = defineStore('shipments', () => {
     searchQuery,
     now,
     shipmentCountdowns,
+    deliveryResults,
     filteredShipments,
     availableTransporters,
     statusCounts,

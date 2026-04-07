@@ -21,16 +21,13 @@ const toggleTheme = () => {
 </script>
 
 <template>
-  <!-- Splash Screen (shown once on app load) -->
   <SplashScreen v-if="!splashDone" @done="splashDone = true" />
 
   <div v-else class="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
-    <!-- Top navigation bar -->
     <nav class="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 transition-colors duration-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           <router-link to="/" class="flex items-center gap-3 group">
-            <!-- Company Logo -->
             <img
               src="/company-logo.jpg"
               alt="Company Logo"
@@ -66,7 +63,6 @@ const toggleTheme = () => {
       </div>
     </nav>
 
-    <!-- Page content -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <RouterView v-slot="{ Component }">
         <transition name="page" mode="out-in">
@@ -75,7 +71,6 @@ const toggleTheme = () => {
       </RouterView>
     </main>
 
-    <!-- Footer -->
     <footer class="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-colors duration-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-center">
         <p class="text-xs text-zinc-400 dark:text-zinc-500 font-medium">

@@ -7,11 +7,6 @@ defineProps<{
 }>()
 
 defineEmits<{ assign: [] }>()
-
-function renderStars(rating: number | null): string {
-  if (!rating) return '—'
-  return '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating))
-}
 </script>
 
 <template>

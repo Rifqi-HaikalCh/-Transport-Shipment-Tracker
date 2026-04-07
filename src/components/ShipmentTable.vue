@@ -38,7 +38,6 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
 </script>
 
 <template>
-  <!-- Loading -->
   <div v-if="store.isLoading" class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm">
     <div class="flex items-center justify-center py-16">
       <div class="flex flex-col items-center gap-4">
@@ -48,7 +47,6 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
     </div>
   </div>
 
-  <!-- Empty -->
   <div v-else-if="store.filteredShipments.length === 0" class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm">
     <div class="flex flex-col items-center justify-center py-16">
       <div class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
@@ -62,10 +60,8 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
     </div>
   </div>
 
-  <!-- Table -->
   <div v-else class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm overflow-hidden">
 
-    <!-- Desktop -->
     <div class="hidden md:block overflow-x-auto">
       <table class="w-full text-left border-collapse" id="shipment-table">
         <thead>
@@ -90,12 +86,10 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
             :class="isUntrackable(shipment) ? 'border-l-2 border-l-red-400 dark:border-l-red-500' : ''"
             @click="viewDetail(shipment.id)"
           >
-            <!-- No. -->
             <td class="px-4 py-3.5">
               <span class="text-xs text-zinc-400 dark:text-zinc-600 font-bold">{{ index + 1 }}</span>
             </td>
 
-            <!-- Tracking No. -->
             <td class="px-4 py-3.5">
               <p class="text-zinc-900 dark:text-zinc-100 font-semibold text-xs font-mono whitespace-nowrap">{{ shipment.trackingNumber }}</p>
               <p v-if="isUntrackable(shipment)" class="flex items-center gap-1 text-red-500 dark:text-red-400 text-xs font-semibold mt-0.5">
@@ -103,33 +97,27 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
               </p>
             </td>
 
-            <!-- Description -->
             <td class="px-4 py-3.5 max-w-[180px]">
               <p class="text-zinc-600 dark:text-zinc-400 text-xs truncate" :title="shipment.description">{{ shipment.description }}</p>
             </td>
 
-            <!-- Weight -->
             <td class="px-4 py-3.5 whitespace-nowrap">
               <span class="text-zinc-700 dark:text-zinc-300 text-sm font-semibold">{{ shipment.weight }}</span>
               <span class="text-zinc-400 dark:text-zinc-500 text-xs ml-0.5">kg</span>
             </td>
 
-            <!-- Origin -->
             <td class="px-4 py-3.5">
               <span class="text-zinc-700 dark:text-zinc-300 text-sm font-medium whitespace-nowrap">{{ shipment.origin }}</span>
             </td>
 
-            <!-- Destination -->
             <td class="px-4 py-3.5">
               <span class="text-zinc-700 dark:text-zinc-300 text-sm font-medium whitespace-nowrap">{{ shipment.destination }}</span>
             </td>
 
-            <!-- Status -->
             <td class="px-4 py-3.5">
               <StatusBadge :status="shipment.status" />
             </td>
 
-            <!-- Transporter -->
             <td class="px-4 py-3.5">
               <span v-if="shipment.transporterName" class="text-zinc-700 dark:text-zinc-300 text-xs font-medium">{{ shipment.transporterName }}</span>
               <span v-else class="inline-flex items-center gap-1 text-red-500 dark:text-red-400 text-xs font-semibold">
@@ -137,7 +125,6 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
               </span>
             </td>
 
-            <!-- Est. Delivery -->
             <td class="px-4 py-3.5 whitespace-nowrap">
               <template v-if="store.shipmentCountdowns[shipment.id] !== undefined">
                 <div class="flex items-center gap-1">
@@ -153,7 +140,6 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
               </template>
             </td>
 
-            <!-- Action -->
             <td class="px-4 py-3.5 text-right">
               <button class="text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400 text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 View →
@@ -164,7 +150,6 @@ function isUntrackable(s: { status: string; transporterId: string | null }) {
       </table>
     </div>
 
-    <!-- Mobile cards -->
     <div class="md:hidden divide-y divide-zinc-200 dark:divide-zinc-800">
       <div
         v-for="(shipment, index) in store.filteredShipments"

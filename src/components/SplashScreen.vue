@@ -31,7 +31,7 @@ onMounted(async () => {
   <Transition name="splash-fade">
     <div
       v-if="visible"
-      class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-950"
+      class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200"
       :class="{ 'splash-exit': exiting }"
     >
       <div class="absolute inset-0 overflow-hidden pointer-events-none">
@@ -52,10 +52,10 @@ onMounted(async () => {
         class="mt-2 text-center transition-all duration-700"
         :class="textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
       >
-        <h1 class="text-3xl font-bold text-white tracking-tight">
+        <h1 class="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
           ShipTrack<span class="text-orange-500">Pro</span>
         </h1>
-        <p class="text-zinc-400 text-sm font-semibold tracking-widest uppercase mt-1.5">
+        <p class="text-zinc-500 dark:text-zinc-400 text-sm font-semibold tracking-widest uppercase mt-1.5">
           Transport Shipment Tracker
         </p>
         <div class="mt-6 flex items-center justify-center gap-1.5">
