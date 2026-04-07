@@ -70,13 +70,19 @@ const headerColor = computed(() => {
 
     <!-- Stepper -->
     <div class="relative flex items-start">
-      <!-- Progress track background -->
-      <div class="absolute top-4 left-0 right-0 h-0.5 bg-zinc-200 dark:bg-zinc-700 mx-[calc(12.5%)] z-0"></div>
-      <!-- Progress fill -->
+      <!-- Progress track background: spans between center of first and last dot -->
       <div
-        class="absolute top-4 left-0 h-0.5 bg-orange-500 dark:bg-orange-400 mx-[calc(12.5%)] z-0 transition-all duration-700 ease-out"
-        :class="isCancelled ? 'bg-zinc-400' : 'bg-orange-500'"
-        :style="{ width: `calc(${(activeIndex / (stages.length - 1)) * 100}% - 0px )` }"
+        class="absolute top-4 h-0.5 bg-zinc-200 dark:bg-zinc-700 z-0"
+        style="left: 12.5%; right: 12.5%;"
+      ></div>
+      <!-- Progress fill: starts at center of first dot, stops at center of active dot -->
+      <div
+        class="absolute top-4 h-0.5 z-0 transition-all duration-700 ease-out"
+        :class="isCancelled ? 'bg-zinc-500' : 'bg-orange-500 dark:bg-orange-400'"
+        :style="{
+          left: '12.5%',
+          width: isCancelled ? '0%' : `${(activeIndex / (stages.length - 1)) * 75}%`
+        }"
       ></div>
 
       <!-- Steps -->
