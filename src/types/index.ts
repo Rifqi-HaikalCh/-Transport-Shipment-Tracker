@@ -1,7 +1,3 @@
-/**
- * Core type definitions for Transport Shipment Tracker
- */
-
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Cancelled'
 
 export interface Shipment {
@@ -10,13 +6,13 @@ export interface Shipment {
   origin: string
   destination: string
   status: ShipmentStatus
-  weight: number // in kg
-  estimatedDelivery: string // ISO date string
-  createdAt: string // ISO date string
+  weight: number
+  estimatedDelivery: string
+  createdAt: string
   transporterId: string | null
   transporterName: string | null
-  vehicleType: string | null // vehicle type of assigned transporter
-  vehiclePlate: string | null // vehicle plate of assigned transporter
+  vehicleType: string | null
+  vehiclePlate: string | null
   description: string
 }
 
@@ -26,7 +22,7 @@ export interface Transporter {
   phone: string
   vehicleType: string
   vehiclePlate: string
-  rating: number // 1-5
+  rating: number
   isAvailable: boolean
 }
 

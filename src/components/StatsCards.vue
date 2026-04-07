@@ -15,7 +15,6 @@ const stats = [
 
 <template>
   <div class="space-y-4 mb-8">
-    <!-- Main stats grid -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
       <div
         v-for="stat in stats"
@@ -34,7 +33,6 @@ const stats = [
       </div>
     </div>
 
-    <!-- Untrackable alert card (shown only when there are unassigned shipments) -->
     <div
       v-if="store.unassignedCount > 0"
       class="flex items-center gap-3 px-5 py-3.5 rounded border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10"

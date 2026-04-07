@@ -1,15 +1,8 @@
-/**
- * Mirage.js Mock API Server
- *
- * Simulates a real REST API with realistic latency and proper HTTP status codes.
- * This replaces the need for a backend server during development.
- */
 import { createServer, Model, Response, type Registry } from 'miragejs'
 import type { ModelDefinition } from 'miragejs/-types'
 import type Schema from 'miragejs/orm/schema'
 import type { Shipment, Transporter } from '@/types'
 
-// Type helpers for Mirage
 type ShipmentModel = ModelDefinition<Shipment>
 type TransporterModel = ModelDefinition<Transporter>
 
@@ -31,7 +24,6 @@ export function makeServer({ environment = 'development' } = {}) {
     },
 
     seeds(server) {
-      // Seed transporters
       server.create('transporter', {
         id: 'tr-001',
         name: 'PT. Ekspres Logistik',
@@ -82,7 +74,6 @@ export function makeServer({ environment = 'development' } = {}) {
         isAvailable: true,
       } as any)
 
-      // Seed shipments
       server.create('shipment', {
         id: 'shp-001',
         trackingNumber: 'TRK-2026-000001',
@@ -215,15 +206,12 @@ export function makeServer({ environment = 'development' } = {}) {
     routes() {
       this.namespace = 'api'
 
-      // Simulate realistic network latency
       this.timing = 400
 
-      // GET /api/shipments — List all shipments
       this.get('/shipments', (schema: AppSchema) => {
         return schema.all('shipment')
       })
 
-      // GET /api/shipments/:id — Get single shipment detail
       this.get('/shipments/:id', (schema: AppSchema, request) => {
         const id = request.params.id
         const shipment = schema.find('shipment', id as string)
@@ -235,7 +223,6 @@ export function makeServer({ environment = 'development' } = {}) {
         return shipment
       })
 
-      // PATCH /api/shipments/:id/assign — Assign transporter to a shipment
       this.patch('/shipments/:id/assign', (schema: AppSchema, request) => {
         const shipmentId = request.params.id
         const { transporterId } = JSON.parse(request.requestBody)
@@ -258,7 +245,6 @@ export function makeServer({ environment = 'development' } = {}) {
           )
         }
 
-        // Validate: cannot assign to Delivered or Cancelled shipments
         if (
           shipment.attrs.status === 'Delivered' ||
           shipment.attrs.status === 'Cancelled'
@@ -281,12 +267,10 @@ export function makeServer({ environment = 'development' } = {}) {
         return shipment
       })
 
-      // GET /api/transporters — List all transporters
       this.get('/transporters', (schema: AppSchema) => {
         return schema.all('transporter')
       })
 
-      // POST /api/shipments — Create a new shipment
       this.post('/shipments', (schema: AppSchema, request) => {
         const body = JSON.parse(request.requestBody)
         const year = new Date().getFullYear()
@@ -315,7 +299,6 @@ export function makeServer({ environment = 'development' } = {}) {
         return { shipment: newShipment.attrs }
       })
 
-      // POST /api/transporters — Register a new transporter
       this.post('/transporters', (schema: AppSchema, request) => {
         const body = JSON.parse(request.requestBody)
         const id = `tr-${Date.now()}`

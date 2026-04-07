@@ -19,7 +19,6 @@ const router = createRouter({
   ],
 })
 
-// Update document title on route change
 router.afterEach((to) => {
   const title = to.meta.title as string | undefined
   if (title) {

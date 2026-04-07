@@ -57,13 +57,10 @@ const onSubmit = handleSubmit(async (values) => {
 </script>
 
 <template>
-  <!-- Backdrop -->
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
     <div class="absolute inset-0 bg-zinc-900/50 dark:bg-black/70 backdrop-blur-sm"></div>
 
-    <!-- Modal -->
     <div class="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-2xl overflow-hidden animate-modal-in">
-      <!-- Header -->
       <div class="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center">
@@ -83,9 +80,7 @@ const onSubmit = handleSubmit(async (values) => {
         </button>
       </div>
 
-      <!-- Form -->
       <form @submit.prevent="onSubmit" class="px-6 py-5 space-y-4">
-        <!-- Name -->
         <div>
           <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
             Transporter Name
@@ -101,7 +96,6 @@ const onSubmit = handleSubmit(async (values) => {
           <p v-if="errors.name" class="mt-1 text-xs text-red-500 font-medium">{{ errors.name }}</p>
         </div>
 
-        <!-- Phone -->
         <div>
           <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
             <Phone class="w-3 h-3 inline mr-1" />Phone Number
@@ -117,7 +111,6 @@ const onSubmit = handleSubmit(async (values) => {
           <p v-if="errors.phone" class="mt-1 text-xs text-red-500 font-medium">{{ errors.phone }}</p>
         </div>
 
-        <!-- Vehicle Type & Plate -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
@@ -150,7 +143,6 @@ const onSubmit = handleSubmit(async (values) => {
           </div>
         </div>
 
-        <!-- Rating -->
         <div>
           <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
             <Star class="w-3 h-3 inline mr-1" />Initial Rating (1–5)
@@ -168,7 +160,6 @@ const onSubmit = handleSubmit(async (values) => {
           <p v-if="errors.rating" class="mt-1 text-xs text-red-500 font-medium">{{ errors.rating }}</p>
         </div>
 
-        <!-- Footer -->
         <div class="flex justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
           <button
             id="btn-cancel-add-transporter"

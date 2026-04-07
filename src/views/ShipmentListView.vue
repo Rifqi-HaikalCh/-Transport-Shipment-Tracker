@@ -41,16 +41,13 @@ function handleTransporterCreated(name: string) {
 
 <template>
   <div>
-    <!-- Page Header -->
     <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h2 class="text-3xl font-bold text-zinc-900 dark:text-white mb-1">Shipments</h2>
         <p class="text-zinc-500 dark:text-zinc-400 font-medium">Track and manage all your shipments in one place.</p>
       </div>
 
-      <!-- Action Buttons -->
       <div class="flex items-center gap-2 shrink-0">
-        <!-- Add Transporter (secondary) -->
         <button
           id="btn-add-transporter"
           @click="showAddTransporter = true"
@@ -61,7 +58,6 @@ function handleTransporterCreated(name: string) {
           <span class="sm:hidden">Transporter</span>
         </button>
 
-        <!-- New Shipment (primary) -->
         <button
           id="btn-new-shipment"
           @click="showAddShipment = true"
@@ -74,19 +70,15 @@ function handleTransporterCreated(name: string) {
       </div>
     </div>
 
-    <!-- Stats Overview Cards -->
     <StatsCards />
 
-    <!-- Filters & Search -->
     <div class="flex flex-col sm:flex-row gap-4 mb-6">
       <StatusFilter />
       <SearchBar />
     </div>
 
-    <!-- Shipment Table -->
     <ShipmentTable />
 
-    <!-- Modals -->
     <AddShipmentModal
       v-if="showAddShipment"
       @close="showAddShipment = false"

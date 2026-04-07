@@ -29,8 +29,6 @@ onMounted(async () => {
   await store.fetchTransporters()
 })
 
-// Keep local shipment ref in sync when store.shipments updates
-// (handles realtime simulation ticking status on detail page)
 watch(
   () => store.shipments.find((s) => s.id === shipmentId),
   (updated) => {
@@ -40,7 +38,6 @@ watch(
   },
 )
 
-// Live countdown for this specific shipment
 const countdown = computed(() => store.shipmentCountdowns[shipmentId])
 
 function formatCountdown(seconds: number): string {
@@ -93,7 +90,6 @@ function goBack() {
 
 <template>
   <div>
-    <!-- Back Button -->
     <button
       id="btn-back"
       @click="goBack"
@@ -115,12 +111,10 @@ function goBack() {
       <span class="text-sm font-bold">Back to Shipments</span>
     </button>
 
-    <!-- Loading State -->
     <div v-if="store.isLoading" class="flex items-center justify-center py-20">
       <div class="w-10 h-10 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
     </div>
 
-    <!-- Untrackable Warning Banner -->
     <div
       v-if="shipment && shipment.status === 'Pending' && !shipment.transporterId"
       class="mb-5 flex items-start gap-3 px-5 py-4 rounded border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10"
@@ -144,9 +138,7 @@ function goBack() {
       </button>
     </div>
 
-    <!-- Shipment Detail -->
     <div v-if="shipment" class="space-y-6">
-      <!-- Header Card -->
       <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm p-6">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
@@ -157,7 +149,6 @@ function goBack() {
             <p class="text-zinc-500 dark:text-zinc-400 font-medium">{{ shipment.description }}</p>
           </div>
 
-          <!-- Assign Button -->
           <button
             v-if="shipment.status === 'Pending'"
             id="btn-assign-transporter"
@@ -177,9 +168,7 @@ function goBack() {
         </div>
       </div>
 
-      <!-- Detail Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Route Info -->
         <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm p-6">
           <h3 class="text-sm font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-5">Route Information</h3>
           <div class="space-y-4">
@@ -196,7 +185,6 @@ function goBack() {
               </div>
             </div>
 
-            <!-- Path line -->
             <div class="flex items-center pl-5">
               <div class="w-0.5 h-6 bg-zinc-200 dark:bg-zinc-700"></div>
             </div>
@@ -216,7 +204,6 @@ function goBack() {
           </div>
         </div>
 
-        <!-- Shipment Info -->
         <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm p-6">
           <h3 class="text-sm font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">Shipment Details</h3>
           <div class="space-y-4 pt-1">
@@ -246,7 +233,6 @@ function goBack() {
           </div>
         </div>
 
-        <!-- Transporter Info -->
         <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm p-6 md:col-span-2">
           <h3 class="text-sm font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">Assigned Transporter</h3>
           <div v-if="shipment.transporterName" class="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -257,7 +243,6 @@ function goBack() {
               <p class="text-zinc-900 dark:text-white font-bold text-lg">{{ shipment.transporterName }}</p>
               <p class="text-zinc-500 dark:text-zinc-400 text-sm font-medium">ID: {{ shipment.transporterId }}</p>
             </div>
-            <!-- Vehicle Info -->
             <div v-if="shipment.vehicleType" class="flex items-center gap-3 sm:text-right">
               <div class="sm:hidden w-px h-8 bg-zinc-200 dark:bg-zinc-700"></div>
               <div>
@@ -286,7 +271,6 @@ function goBack() {
       </div>
     </div>
 
-    <!-- Assign Transporter Modal -->
     <AssignTransporterModal
       v-if="showAssignModal"
       :transporters="store.availableTransporters"

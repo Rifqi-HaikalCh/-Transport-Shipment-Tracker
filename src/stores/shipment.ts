@@ -1,16 +1,3 @@
-/**
- * Pinia Store — Shipments
- *
- * Data source strategy:
- *   - Development: Mirage.js intercepts fetch() calls → mock data + local simulation
- *   - Production: Supabase queries + Supabase Realtime channel for live DB updates
- *
- * Simulation (dev only):
- *   - Every real second = ~5 simulated minutes of freight time
- *   - Pending+assigned shipments transition to In Transit after ~20s
- *   - In Transit shipments have a ticking countdown; status → Delivered at 0
- *   - `shipmentCountdowns` exposes seconds-remaining per shipment for the UI
- */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -26,7 +13,6 @@ function generateTrackingNumber(): string {
 }
 
 export const useShipmentStore = defineStore('shipments', () => {
-  // ─── State ─────────────────────────────────────────────
   const shipments = ref<Shipment[]>([])
   const transporters = ref<Transporter[]>([])
   const selectedShipment = ref<Shipment | null>(null)
@@ -34,20 +20,13 @@ export const useShipmentStore = defineStore('shipments', () => {
   const error = ref<string | null>(null)
   const filterStatus = ref<ShipmentStatus | 'All'>('All')
   const searchQuery = ref('')
-
-  // ─── Realtime Simulation State ─────────────────────────
-  /** Reactive unix timestamp (seconds), updated every second during simulation */
   const now = ref(Math.floor(Date.now() / 1000))
-  /** shipmentId → unix timestamp when it should become Delivered */
   const scheduledDeliveries = ref<Record<string, number>>({})
-  /** shipmentId → unix timestamp when Pending+assigned should become In Transit */
   const scheduledTransitions = ref<Record<string, number>>({})
   let simulationTickId: ReturnType<typeof setInterval> | null = null
 
-  // ─── Supabase Realtime  ─────────────────────────────────
   let supabaseChannel: RealtimeChannel | null = null
 
-  // ─── Getters ───────────────────────────────────────────
   const filteredShipments = computed(() => {
     let result = shipments.value
     if (filterStatus.value !== 'All') {
@@ -81,11 +60,6 @@ export const useShipmentStore = defineStore('shipments', () => {
     () => shipments.value.filter((s) => s.status === 'Pending' && !s.transporterId).length,
   )
 
-  /**
-   * Per-shipment countdown in seconds remaining until simulated delivery.
-   * Only present for In Transit shipments that have been scheduled.
-   * The UI uses this to render a live countdown instead of a static date.
-   */
   const shipmentCountdowns = computed(() => {
     const result: Record<string, number> = {}
     for (const [id, deliveryTime] of Object.entries(scheduledDeliveries.value)) {
@@ -94,7 +68,6 @@ export const useShipmentStore = defineStore('shipments', () => {
     return result
   })
 
-  // ─── Actions ───────────────────────────────────────────
   async function fetchShipments() {
     isLoading.value = true
     error.value = null
@@ -204,7 +177,6 @@ export const useShipmentStore = defineStore('shipments', () => {
         const updated = data.shipment as Shipment
         _syncShipmentLocal(updated)
 
-        // Schedule delivery countdown for the newly assigned shipment
         _scheduleDelivery(shipmentId)
 
         return { success: true, shipment: updated }
@@ -255,7 +227,6 @@ export const useShipmentStore = defineStore('shipments', () => {
         const newShipment = data.shipment as Shipment
         shipments.value.unshift(newShipment)
 
-        // If shipment was created with a transporter, schedule countdown
         if (newShipment.transporterId) _scheduleDelivery(newShipment.id)
 
         return { success: true, shipment: newShipment }
@@ -319,43 +290,31 @@ export const useShipmentStore = defineStore('shipments', () => {
     searchQuery.value = query
   }
 
-  // ─── Private Helpers ────────────────────────────────────
   function _syncShipmentLocal(updated: Shipment) {
     const idx = shipments.value.findIndex((s) => s.id === updated.id)
     if (idx !== -1) shipments.value[idx] = updated
     if (selectedShipment.value?.id === updated.id) selectedShipment.value = updated
   }
 
-  /** Schedule a delivery countdown for a given shipment ID (dev simulation) */
   function _scheduleDelivery(shipmentId: string, delaySec?: number) {
     const t = Math.floor(Date.now() / 1000)
-    // 90–300 seconds (1.5–5 min) — visible countdown in the demo
     const delay = delaySec ?? 90 + Math.floor(Math.random() * 210)
     scheduledDeliveries.value = { ...scheduledDeliveries.value, [shipmentId]: t + delay }
   }
 
-  // ─── Real-time Simulation (Dev only) ───────────────────
-  /**
-   * Starts a per-second simulation tick:
-   *  - Pending + assigned → "In Transit" after ~20-60s (transition delay)
-   *  - In Transit + assigned → "Delivered" when countdown hits 0  (90-300s)
-   *  - `shipmentCountdowns` reactive ref drives the live countdown UI
-   */
   function startRealtimeSimulation() {
     if (simulationTickId !== null) return
 
     const t = Math.floor(Date.now() / 1000)
 
-    // Schedule existing In Transit + assigned shipments for delivery
     shipments.value
       .filter((s) => s.status === 'In Transit' && s.transporterId)
       .forEach((s) => _scheduleDelivery(s.id))
 
-    // Schedule existing Pending + assigned shipments for In Transit transition
     shipments.value
       .filter((s) => s.status === 'Pending' && s.transporterId)
       .forEach((s) => {
-        const delay = 20 + Math.floor(Math.random() * 40) // 20-60s
+        const delay = 20 + Math.floor(Math.random() * 40)
         scheduledTransitions.value = { ...scheduledTransitions.value, [s.id]: t + delay }
       })
 
@@ -363,7 +322,6 @@ export const useShipmentStore = defineStore('shipments', () => {
       const ts = Math.floor(Date.now() / 1000)
       now.value = ts
 
-      // Process Pending → In Transit transitions
       const transitions = { ...scheduledTransitions.value }
       for (const [id, transitionAt] of Object.entries(transitions)) {
         if (ts >= transitionAt) {
@@ -381,7 +339,6 @@ export const useShipmentStore = defineStore('shipments', () => {
         }
       }
 
-      // Process In Transit → Delivered when countdown hits zero
       const deliveries = { ...scheduledDeliveries.value }
       for (const [id, deliverAt] of Object.entries(deliveries)) {
         if (ts >= deliverAt) {
@@ -409,18 +366,9 @@ export const useShipmentStore = defineStore('shipments', () => {
     scheduledTransitions.value = {}
   }
 
-  // ─── Supabase Realtime (Production) ────────────────────
-  /**
-   * Subscribes to Postgres changes on 'shipments' and 'transporters' tables.
-   * Any INSERT/UPDATE/DELETE from any client or from the DB triggers a local
-   * state update — making the UI automatically reflect database changes.
-   *
-   * Requires RLS policies to allow SELECT, and Realtime enabled on the tables
-   * in the Supabase Dashboard → Database → Replication.
-   */
   function startSupabaseRealtime() {
     if (!USE_SUPABASE) return
-    if (supabaseChannel) return // already subscribed
+    if (supabaseChannel) return
 
     supabaseChannel = supabase
       .channel('shiptrack-realtime')
@@ -478,7 +426,6 @@ export const useShipmentStore = defineStore('shipments', () => {
   }
 
   return {
-    // State
     shipments,
     transporters,
     selectedShipment,
@@ -488,12 +435,10 @@ export const useShipmentStore = defineStore('shipments', () => {
     searchQuery,
     now,
     shipmentCountdowns,
-    // Getters
     filteredShipments,
     availableTransporters,
     statusCounts,
     unassignedCount,
-    // Actions
     fetchShipments,
     fetchShipmentById,
     fetchTransporters,
@@ -502,10 +447,8 @@ export const useShipmentStore = defineStore('shipments', () => {
     addTransporter,
     setFilterStatus,
     setSearchQuery,
-    // Simulation
     startRealtimeSimulation,
     stopRealtimeSimulation,
-    // Supabase Realtime
     startSupabaseRealtime,
     stopSupabaseRealtime,
   }

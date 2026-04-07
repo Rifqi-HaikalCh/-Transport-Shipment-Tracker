@@ -12,7 +12,6 @@ const emit = defineEmits<{
   created: [trackingNumber: string]
 }>()
 
-// Preview of auto-generated tracking number shown before submit
 const previewTrackingNumber = computed(() => {
   const year = new Date().getFullYear()
   return `TRK-${year}-XXXXXX`
@@ -65,13 +64,10 @@ const onSubmit = handleSubmit(async (values) => {
 </script>
 
 <template>
-  <!-- Backdrop -->
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
     <div class="absolute inset-0 bg-zinc-900/50 dark:bg-black/70 backdrop-blur-sm"></div>
 
-    <!-- Modal -->
     <div class="relative w-full max-w-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-2xl overflow-hidden animate-modal-in">
-      <!-- Header -->
       <div class="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center">
@@ -91,7 +87,6 @@ const onSubmit = handleSubmit(async (values) => {
         </button>
       </div>
 
-      <!-- Tracking Number Preview -->
       <div class="px-6 pt-4">
         <div class="flex items-center gap-2 px-3 py-2 rounded bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
           <span class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Tracking No. (auto-generated):</span>
@@ -99,9 +94,7 @@ const onSubmit = handleSubmit(async (values) => {
         </div>
       </div>
 
-      <!-- Form -->
       <form @submit.prevent="onSubmit" class="px-6 py-4 space-y-4">
-        <!-- Origin & Destination row -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
@@ -133,7 +126,6 @@ const onSubmit = handleSubmit(async (values) => {
           </div>
         </div>
 
-        <!-- Description -->
         <div>
           <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
             <Package class="w-3 h-3 inline mr-1" />Cargo Description
@@ -149,7 +141,6 @@ const onSubmit = handleSubmit(async (values) => {
           <p v-if="errors.description" class="mt-1 text-xs text-red-500 font-medium">{{ errors.description }}</p>
         </div>
 
-        <!-- Weight & Delivery row -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
@@ -183,7 +174,6 @@ const onSubmit = handleSubmit(async (values) => {
           </div>
         </div>
 
-        <!-- Transporter (optional) -->
         <div>
           <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
             <Truck class="w-3 h-3 inline mr-1" />Assign Transporter
@@ -209,7 +199,6 @@ const onSubmit = handleSubmit(async (values) => {
           </p>
         </div>
 
-        <!-- Footer -->
         <div class="flex justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
           <button
             id="btn-cancel-add-shipment"

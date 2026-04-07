@@ -14,7 +14,6 @@ const emit = defineEmits<{
   close: []
 }>()
 
-// Form validation schema
 const validationSchema = yup.object({
   transporterId: yup.string().required('Please select a transporter'),
 })
@@ -42,19 +41,15 @@ function renderStars(rating: number) {
 </script>
 
 <template>
-  <!-- Modal Overlay -->
   <div
     class="fixed inset-0 z-50 flex items-center justify-center p-4"
     @click.self="$emit('close')"
   >
-    <!-- Backdrop -->
     <div class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60 backdrop-blur-sm"></div>
 
-    <!-- Modal Content -->
     <div
       class="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl overflow-hidden animate-in"
     >
-      <!-- Header -->
       <div class="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800">
         <div class="flex items-center justify-between">
           <div>
@@ -73,9 +68,7 @@ function renderStars(rating: number) {
         </div>
       </div>
 
-      <!-- Body -->
       <form @submit.prevent="onSubmit" class="px-6 py-4">
-        <!-- Transporter List -->
         <div class="space-y-3 max-h-64 overflow-y-auto pr-1">
           <label
             v-for="transporter in transporters"
@@ -98,7 +91,6 @@ function renderStars(rating: number) {
               class="sr-only"
             />
 
-            <!-- Avatar -->
             <div
               class="w-10 h-10 rounded flex items-center justify-center font-bold shrink-0"
               :class="
@@ -110,7 +102,6 @@ function renderStars(rating: number) {
               {{ transporter.name.charAt(0) }}
             </div>
 
-            <!-- Info -->
             <div class="flex-1 min-w-0">
               <p class="text-zinc-900 dark:text-white font-bold text-sm truncate">{{ transporter.name }}</p>
               <div class="flex items-center gap-2 mt-0.5">
@@ -120,7 +111,6 @@ function renderStars(rating: number) {
               </div>
             </div>
 
-            <!-- Rating -->
             <div class="text-right shrink-0">
               <span class="text-xs text-amber-500 dark:text-amber-400">{{ renderStars(transporter.rating) }}</span>
               <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-bold">{{ transporter.rating.toFixed(1) }}</p>
@@ -128,12 +118,10 @@ function renderStars(rating: number) {
           </label>
         </div>
 
-        <!-- Validation Error -->
         <p v-if="errors.transporterId" class="mt-3 text-red-600 dark:text-red-400 text-sm font-semibold">
           {{ errors.transporterId }}
         </p>
 
-        <!-- Footer Actions -->
         <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800">
           <button
             id="btn-cancel-assign"

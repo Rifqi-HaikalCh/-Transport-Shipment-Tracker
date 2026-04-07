@@ -3,7 +3,6 @@ import { ref, watchEffect } from 'vue'
 import { RouterView } from 'vue-router'
 import { Moon, Sun } from 'lucide-vue-next'
 
-// Dark mode state - defaulting to true based on previous aesthetic
 const isDark = ref(true)
 
 watchEffect(() => {
@@ -21,11 +20,9 @@ const toggleTheme = () => {
 
 <template>
   <div class="min-h-screen bg-transparent content-wrapper">
-    <!-- Top navigation bar -->
     <nav class="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 transition-colors duration-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
-          <!-- Logo / Brand -->
           <router-link to="/" class="flex items-center gap-3 group">
             <div
               class="w-8 h-8 rounded bg-orange-600 flex items-center justify-center shrink-0"
@@ -57,13 +54,12 @@ const toggleTheme = () => {
             </div>
           </router-link>
 
-          <!-- Right side indicator & Toggle -->
           <div class="flex items-center gap-4">
             <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20">
               <span class="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400 animate-pulse"></span>
               <span class="text-xs text-green-700 dark:text-green-400 font-semibold uppercase tracking-wider">System Online</span>
             </div>
-            
+
             <button
               @click="toggleTheme"
               class="p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
@@ -77,7 +73,6 @@ const toggleTheme = () => {
       </div>
     </nav>
 
-    <!-- Page content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <RouterView v-slot="{ Component }">
         <transition name="page" mode="out-in">
@@ -89,7 +84,6 @@ const toggleTheme = () => {
 </template>
 
 <style scoped>
-/* Page transition animation */
 .page-enter-active,
 .page-leave-active {
   transition: all 0.2s ease-out;
