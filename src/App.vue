@@ -2,8 +2,10 @@
 import { ref, watchEffect } from 'vue'
 import { RouterView } from 'vue-router'
 import { Moon, Sun } from 'lucide-vue-next'
+import SplashScreen from '@/components/SplashScreen.vue'
 
 const isDark = ref(true)
+const splashDone = ref(false)
 
 watchEffect(() => {
   if (isDark.value) {
@@ -19,31 +21,22 @@ const toggleTheme = () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-transparent content-wrapper">
+  <!-- Splash Screen (shown once on app load) -->
+  <SplashScreen v-if="!splashDone" @done="splashDone = true" />
+
+  <div v-else class="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
+    <!-- Top navigation bar -->
     <nav class="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 transition-colors duration-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           <router-link to="/" class="flex items-center gap-3 group">
-            <div
-              class="w-8 h-8 rounded bg-orange-600 flex items-center justify-center shrink-0"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-4 h-4 text-white"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
-                <path d="M15 18H9" />
-                <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
-                <circle cx="17" cy="18" r="2" />
-                <circle cx="7" cy="18" r="2" />
-              </svg>
-            </div>
+            <!-- Company Logo -->
+            <img
+              src="/company-logo.jpg"
+              alt="Company Logo"
+              class="h-9 w-auto object-contain rounded"
+              draggable="false"
+            />
             <div>
               <h1 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight leading-tight">
                 ShipTrack<span class="text-orange-600">Pro</span>
@@ -73,13 +66,23 @@ const toggleTheme = () => {
       </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Page content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <RouterView v-slot="{ Component }">
         <transition name="page" mode="out-in">
           <component :is="Component" />
         </transition>
       </RouterView>
     </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-colors duration-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-center">
+        <p class="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
+          &copy;2026 Rifqi Haikal
+        </p>
+      </div>
+    </footer>
   </div>
 </template>
 
