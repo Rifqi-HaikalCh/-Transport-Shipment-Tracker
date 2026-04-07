@@ -89,8 +89,32 @@ function goBack() {
       <div class="w-10 h-10 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
     </div>
 
+    <!-- Untrackable Warning Banner -->
+    <div
+      v-if="shipment && shipment.status === 'Pending' && !shipment.transporterId"
+      class="mb-5 flex items-start gap-3 px-5 py-4 rounded border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-500 dark:text-red-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+        <path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div class="flex-1">
+        <p class="text-red-700 dark:text-red-400 font-bold text-sm">This shipment cannot be tracked</p>
+        <p class="text-red-600 dark:text-red-400/80 text-xs mt-0.5 font-medium">
+          No transporter has been assigned. The system cannot track or update the status of this shipment until a transporter is registered.
+        </p>
+      </div>
+      <button
+        v-if="shipment.status === 'Pending'"
+        @click="openAssignModal"
+        class="shrink-0 px-3 py-1.5 rounded text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition-colors"
+      >
+        Assign Now
+      </button>
+    </div>
+
     <!-- Shipment Detail -->
-    <div v-else-if="shipment" class="space-y-6">
+    <div v-if="shipment" class="space-y-6">
       <!-- Header Card -->
       <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-sm p-6">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
