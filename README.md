@@ -60,7 +60,7 @@ Built with **Vue 3 Composition API**, **Pinia**, and **TailwindCSS v4** — powe
 ```
 src/
 ├── __tests__/                    # Unit test files
-│   └── shipment.store.spec.ts    # Pinia store tests (7 test cases)
+│   └── shipment.store.spec.ts    # Pinia store tests (9 test cases)
 │
 ├── assets/
 │   └── main.css                  # TailwindCSS v4 config + design tokens
@@ -169,6 +169,7 @@ npx vitest --coverage
 |--------|-----------|--------|
 | Shipment Store — Initial state | 1 | ✅ Pass |
 | Shipment Store — Filter by status | 2 | ✅ Pass |
+| Shipment Store — Assign transporter logic | 2 | ✅ Pass |
 | Shipment Store — Search query | 1 | ✅ Pass |
 | Shipment Store — Status counts | 1 | ✅ Pass |
 | Shipment Store — Available/Unassigned metrics | 2 | ✅ Pass |

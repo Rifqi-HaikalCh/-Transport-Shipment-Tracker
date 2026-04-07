@@ -1,10 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useShipmentStore } from '@/stores/shipment'
 
 describe('Shipment Store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+  })
+  
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('has correct initial state', () => {
@@ -89,5 +93,56 @@ describe('Shipment Store', () => {
 
     expect(store.availableTransporters).toHaveLength(2)
     expect(store.availableTransporters.map(t => t.id)).toEqual(['t1', 't3'])
+  })
+
+  it('assigns transporter successfully via mock API', async () => {
+    const store = useShipmentStore()
+    
+    store.shipments = [
+      { id: 'shp-1', trackingNumber: 'T1', status: 'Pending', origin: '', destination: '', description: '', weight: 0, estimatedDelivery: '', createdAt: '', transporterId: null, transporterName: null, vehicleType: null, vehiclePlate: null },
+    ]
+    store.selectedShipment = store.shipments[0] || null
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        shipment: { 
+          id: 'shp-1', 
+          trackingNumber: 'T1', 
+          status: 'In Transit', 
+          origin: '', destination: '', description: '', weight: 0, estimatedDelivery: '', createdAt: '', 
+          transporterId: 'tr-1', 
+          transporterName: 'Transporter A', 
+          vehicleType: 'Truck', 
+          vehiclePlate: 'B 1234 XYZ' 
+        }
+      })
+    })
+
+    const result = await store.assignTransporter('shp-1', 'tr-1')
+
+    expect(result.success).toBe(true)
+    expect(store.shipments[0]?.status).toBe('In Transit')
+    expect(store.shipments[0]?.transporterId).toBe('tr-1')
+    expect(store.selectedShipment?.transporterName).toBe('Transporter A')
+    expect(global.fetch).toHaveBeenCalledWith('/api/shipments/shp-1/assign', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({ transporterId: 'tr-1' })
+    }))
+  })
+
+  it('handles assign transporter failure gracefully', async () => {
+    const store = useShipmentStore()
+    
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: () => Promise.resolve({ error: 'Transporter is not available' })
+    })
+
+    const result = await store.assignTransporter('shp-1', 'tr-1')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Transporter is not available')
+    expect(store.error).toBe('Transporter is not available')
   })
 })
