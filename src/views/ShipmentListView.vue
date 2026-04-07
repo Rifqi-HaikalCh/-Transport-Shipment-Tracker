@@ -20,10 +20,12 @@ onMounted(async () => {
   await store.fetchShipments()
   await store.fetchTransporters()
   store.startRealtimeSimulation()
+  store.startSupabaseRealtime()
 })
 
 onUnmounted(() => {
   store.stopRealtimeSimulation()
+  store.stopSupabaseRealtime()
 })
 
 function handleShipmentCreated(trackingNumber: string) {
