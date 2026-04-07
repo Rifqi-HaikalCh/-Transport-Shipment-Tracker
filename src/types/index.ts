@@ -34,3 +34,20 @@ export interface AssignTransporterPayload {
   shipmentId: string
   transporterId: string
 }
+
+export interface NewShipmentPayload {
+  origin: string
+  destination: string
+  description: string
+  weight: number
+  estimatedDelivery: string
+  transporterId?: string | null
+}
+
+export interface NewTransporterPayload {
+  name: string
+  phone: string
+  vehicleType: string
+  vehiclePlate: string
+  rating?: number
+}
